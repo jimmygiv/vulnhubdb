@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-#mrsudo-jimmy's repository of vulnhub notes searchable
-#Written in python3, but should work in python 2.x anyway
-#import basic modules
+#Version 0
+#Created to be a knowledge base for jimmygiv's vulnhub walkthroughs.
 try:
   from os import listdir
   from subprocess import Popen,PIPE
@@ -24,9 +23,15 @@ splash = color(splash, 'green')
 print(splash)
 found = namedtuple('found', 'name sections text'); foundList = []
 files = listdir('.')
+files.remove("README.md")
 files.remove('.git')
 files.remove('vulnhubdb.py')
-files.remove('README.md')
+files.sort()
+try:
+  files.remove('.vulnhubdb.py.swp')
+except:
+  pass
+
 
 def search(string):
   for f in files:
@@ -56,27 +61,101 @@ def search_file(string, f):
       if string.upper() in line.upper():
         sections = sections + 1
         text.append(line)
-#-------------------------
+#----------------------------------------------------------------------------------
   if sections and text:
     text = ''.join(str(v) for v in text)
     return name, sections, text
   else:
     return '', '', ''
 
+def prompt(options):
+  choice = None
+  print(options)
+  while not choice:
+    try:
+      choice = input(color("$ ", "blue"))
+      if choice in options:
+        pass
+      else:
+        choice = None
+    except:
+      choice = None
+  return choice
 
+def view_files():
+  options = ""
+  if len(files) > 15 and len(files) < 30:
+    for i in range(len(files)):
+      if not (i % 2 ==0):
+        options+="%-18s %s\n" % (files[(i-1)], files[i])
+  elif len(files) > 20:
+    for i in range(len(files)):
+      if not (i % 3 ==0):
+        options+="%-18s %-18s %s\n" % (files[(i-2)], files[(i-1)], files[i])
+  else:
+    options = '\n'.join(str(v) for v in files)
+  file = None
+  while not file:
+    file = prompt(color(options, "green"))
+    try:
+      test = open(file, 'r')
+      test.close()
+      pass
+    except:
+      print("[*]  %s is not a file" % color(file, "red"))
+      file = None
+  return file
 
+def view(fname):
+  f = open(fname, 'r')
+  file = f.read()
+  file = file.split('[*]')
+  file = list(filter(None, file))
+  sections = len(file)
+  i = 0
+  for section in file:
+    print("Box: %s Section: %s of %s" % (fname, i+1, sections))
+    print(section)
+    i+=1
+    input()
 
 def main():
-  print("print prompt")
+  options = "1. Search\n2. View by name"
+  option = int(prompt(options))
+  if option == 1:
+    search(input("Input your search string: "))
+  else:
+   temp = view_files()
+   view(temp)
+usage = """
+-s [search string]
+-v **to view by name**"""
+
 
 if len(argv) <= 1:
   main()
 elif len(argv) >= 3:
   if '-s' in argv:
     search(' '.join(str(v) for v in argv[2:]))
+  elif argv[1] == '-v':
+    try:
+      temp = open(argv[2], 'r')
+      temp.close()
+      pass
+    except:
+      print(color("%s not found" % argv[2], "red"))
+      exit()
+    view(argv[2])
+  else:
+    print(usage)
+    exit()
+elif len(argv) == 2:
+  if argv[1] == '-v':
+    view_files()
   else:
     print(usage)
     exit()
 else:
   print(usage)
   exit()
+

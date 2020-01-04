@@ -33,6 +33,8 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 TRACEROUTE
 HOP RTT     ADDRESS
 1   0.34 ms 172.16.16.13
+
+
 [*]
 2. Web scanning
 root@hostmachine:/var/www/html# gobuster -u http://172.16.16.13 -w /usr/share/seclists/Discovery/Web-Content/common.txt
@@ -81,7 +83,11 @@ oot@hostmachine:~# nikto -h 172.16.16.13
 + End Time:           2019-04-23 21:07:46 (GMT-5) (53 seconds)
 ---------------------------------------------------------------------------
 + 1 host(s) tested
+
+
+
 **Only real web page is index.php. Super odd
+
 [*]
 3. RPC nullsession denied 
 root@hostmachine:~# rpcclient -U "" 172.16.16.13
@@ -102,6 +108,7 @@ $password ="Niamey4Ever227!!!" ;//I have to remember it
 [*]
 7.ls -l **FOUND FLAG 1**
 mamadou@Wakanda1:~$ cat flag1.txt
+
 Flag : d86b9ad71ca887f4dd1dac86ba1c4dfc
 [*]
 8. Priv enums
@@ -117,6 +124,7 @@ mamadou@Wakanda1:~$ find / -user devops 2>/dev/null
 /home/devops/.profile
 /home/devops/.bash_logout
 /home/devops/flag2.txt
+
 **I got a funny message about getting a new email** I thought it had to be some kind of kicked script
 [*]
 10. Placed reverse shell payload in /srv/.antivirus.py, and set listner
@@ -169,3 +177,4 @@ cat root.txt
 Congratulations You are Root!
 
 821ae63dbe0c573eff8b69d451fb21bc
+[*]

